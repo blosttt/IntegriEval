@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Shield, Mail, Lock, LogIn, Globe, AlertCircle } from "lucide-react";
-import { api, getToken, getRole } from "@/lib/api";
+import { api, getToken, getRole, getApiBase } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
   // Helper request since we want to pass role to the mock endpoint
   const requestMockSSO = async (email: string, name: string, role: string) => {
-    const response = await fetch("http://127.0.0.1:8000/api/auth/sso/google-mock", {
+    const response = await fetch(`${getApiBase()}/auth/sso/google-mock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, name, role }), // our backend can be modified to read role!

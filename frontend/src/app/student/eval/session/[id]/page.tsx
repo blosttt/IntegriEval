@@ -6,7 +6,7 @@ import {
   ShieldAlert, Clock, AlertOctagon, HelpCircle, 
   CheckCircle, XCircle, ArrowRight, BookOpen, LogOut 
 } from "lucide-react";
-import { api, getToken, getRole, getWsBase } from "@/lib/api";
+import { api, getToken, getRole, getWsBase, getApiBase } from "@/lib/api";
 
 interface Question {
   question_id: number;
@@ -159,7 +159,7 @@ export default function EvalSessionPage() {
   const logProctoringEvent = async (action: string, extra = {}) => {
     try {
       const token = getToken();
-      await fetch(`http://127.0.0.1:8000/api/session/${sessionId}/status`, {
+      await fetch(`${getApiBase()}/session/${sessionId}/status`, {
         method: "GET", // Simple fetch fallback to keep ws clean
         headers: { "Authorization": `Bearer ${token}` }
       });
