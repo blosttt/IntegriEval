@@ -1,0 +1,34 @@
+# Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+
+# Databases
+backend/*.db
+backend/*.db-journal
+uploads/
+
+# NextJS
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Environments / Credentials
+.env
+backend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# OS files
+.DS_Store
+Thumbs.db
