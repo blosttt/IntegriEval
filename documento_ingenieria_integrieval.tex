@@ -1,0 +1,386 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+% Paleta de Colores Corporativa
+\definecolor{primary}{RGB}{37, 99, 235}     % Azul Royal
+\definecolor{secondary}{RGB}{99, 102, 241}  % Índigo
+\definecolor{darkbg}{RGB}{15, 23, 42}       % Pizarra Oscura
+\definecolor{accentgreen}{RGB}{16, 185, 129}% Verde Éxito
+\definecolor{accentred}{RGB}{239, 68, 68}   % Rojo Alerta
+\definecolor{lightgray}{RGB}{248, 250, 252} % Gris Claro
+\definecolor{bordercolor}{RGB}{226, 232, 240}
+
+% Configuración de Hipervínculos
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    filecolor=magenta,      
+    urlcolor=secondary,
+    citecolor=primary
+}
+
+% Configuración de Encabezados y Pies de Página
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \textcolor{gray}{\textbf{IntegriEval}} — Especificación de Ingeniería de Software}
+\fancyhead[R]{\small \textcolor{gray}{Versión 2.0.0}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Estilo de Cajas de Texto
+\tcbset{
+    colback=lightgray,
+    colframe=secondary,
+    arc=4mm,
+    boxrule=1pt,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=secondary
+}
+
+% Formato de Secciones
+\titleformat{\section}{\Large\bfseries\color{primary}}{\thesection.}{0.5em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{secondary}}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{darkbg}}{\thesubsubsection.}{0.5em}{}
+
+\begin{document}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% PORTADA
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    
+    {\Huge \textbf{\color{primary} IntegriEval}}\\[0.4cm]
+    {\Large \textbf{Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash}}\\[1.5cm]
+    
+    \begin{tcolorbox}[colback=primary!5!white,colframe=primary,title=Documento de Especificación Formal de Ingeniería de Software]
+        \centering
+        \vspace{0.2cm}
+        \textbf{Asignatura / Proyecto:} Proyecto de Ingeniería de Software / Taller de Título\\
+        \textbf{Fecha:} Agosto 2026 \quad $\vert$ \quad \textbf{Versión:} 2.0.0\\
+        \textbf{Entorno:} Educación Superior / Cátedras Universitarias
+        \vspace{0.2cm}
+    \end{tcolorbox}
+    
+    \vspace{2.5cm}
+    
+    \begin{minipage}{0.45\textwidth}
+        \begin{flushleft} \large
+            \textbf{Equipo de Desarrollo:}\\
+            Equipo Estudiantil IntegriEval\\
+            Facultad de Ingeniería
+        \end{flushleft}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \begin{flushright} \large
+            \textbf{Repositorio Oficial:}\\
+            \href{https://github.com/blosttt/IntegriEval}{\texttt{github.com/blosttt/IntegriEval}}
+        \end{flushright}
+    \end{minipage}
+    
+    \vfill
+    {\large Agosto, 2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+% SECCIÓN 1: DEFINICIÓN CLARA DEL PROBLEMA (10%)
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Definición Clara del Problema (10\%)}
+
+\subsection{Contexto y Antecedentes}
+La proliferación y democratización de los Modelos de Lenguaje Grande (LLMs) como GPT-4, Claude y Gemini ha alterado irreversiblemente los mecanismos de evaluación en la educación superior. En la dinámica actual, los estudiantes cargan sus informes de laboratorio, ensayos y proyectos semestrales a través del LMS institucional (Canvas, Moodle, Blackboard).
+
+Los equipos docentes deben enfrentarse a la revisión de cientos de páginas escritas en formato digital (PDF/Word), careciendo de instrumentos confiables y pedagógicamente justos para validar si el contenido refleja las competencias reales del estudiante o si fue generado íntegramente por un sistema de IA sin apropiación de conocimiento.
+
+\subsection{Articulación del Problema}
+El problema se descompone en tres dimensiones críticas:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Inviabilidad de los Detectores Estadísticos de 'Caja Negra':} Las soluciones comerciales (ej. Turnitin AI, GPTZero) clasifican textos mediante métricas opacas de perplejidad y ráfaga léxica. Investigaciones recientes han comprobado que poseen una alta tasa de \textbf{falsos positivos} (castigando a estudiantes no nativos o redacciones formales rigurosas) y \textbf{falsos negativos} (eludibles con reescritura básica). Una sanción disciplinaria sustentada únicamente en un porcentaje estadístico carece de validez jurídica y ética.
+    \item \textbf{Inviabilidad Logística de la Interrogación Universal:} La defensa oral presencial es el método más certero para acreditar autoría; no obstante, interrogar oralmente al $100\%$ de los estudiantes en cursos masivos (60 a 200 alumnos) resulta humanamente imposible para el cuerpo docente.
+    \item \textbf{Sobrecarga Cognitiva y Temporal:} Los docentes dedican hasta 25 horas semanales a la corrección mecánica de informes contrastándolos con la pauta y la bibliografía del curso.
+\end{enumerate}
+
+\subsection{Percepción de las Partes Interesadas (Stakeholders)}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5.5cm} X}
+\toprule
+\textbf{Stakeholder} & \textbf{Percepción y Dolores Identificados} & \textbf{Expectativa y Validación de Relevancia} \\
+\midrule
+\textbf{Docentes} & 
+\textit{"No sé si el alumno aprendió o si un LLM hizo el trabajo. No puedo interrogar a 100 alumnos ni acusar a nadie sin pruebas tangibles."} & 
+Requieren una herramienta que entregue notas preliminares justificadas, pools de preguntas y gestione citas solo para casos sospechosos o aleatorios. \\
+\addlinespace
+\textbf{Ayudantes} & 
+\textit{"Revisar 80 PDFs idénticos es agotador y dilata la entrega de retroalimentación semanas enteras."} & 
+Desean subida masiva en lote y extracción de resúmenes estructurados en Markdown. \\
+\addlinespace
+\textbf{Estudiantes} & 
+\textit{"Es frustrante que un detector te acuse injustamente. Si hay dudas, prefiero que me hagan preguntas sobre mi propio trabajo."} & 
+Exigen un proceso transparente, sin fricción de cuentas adicionales y derecho a defensa oral. \\
+\addlinespace
+\textbf{Dirección de Carrera} & 
+\textit{"Debemos resguardar el prestigio institucional y evitar sanciones arbitrarias que deriven en litigios."} & 
+Validan la necesidad de trazabilidad auditable y defensas orales fundamentadas en evidencia. \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz de Validación con Stakeholders}
+\end{table}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+% SECCIÓN 2: OBJETIVOS SMART Y MATRIZ DE TRAZABILIDAD (25%)
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Objetivos Específicos y Matriz de Trazabilidad (25\%)}
+
+\subsection{Objetivo General}
+Desarrollar e implementar \textbf{IntegriEval}, una plataforma web para la evaluación semi-automatizada de trabajos académicos que integre conversión de documentos a Markdown, análisis de pauta asistido por IA contextualizada con material de curso, generación de bancos de preguntas flash editables y un sistema de verificación oral focalizado con agendamiento automático según la disponibilidad del docente.
+
+\subsection{Objetivos Específicos (Criterios SMART)}
+
+\begin{tcolorbox}[title=OE1: Módulo de Ingesta, Nómina y Conversión Estructurada]
+\textbf{Específico (S):} Construir el módulo de carga de nómina estudiantil vía CSV y subida masiva de trabajos (PDF/DOCX) con conversión a Markdown estructurado.\\
+\textbf{Medible (M):} Tasa de éxito de conversión $\ge 98\%$ en documentos estándar y soporte para lotes de hasta 100 archivos por operación.\\
+\textbf{Alcanzable (A):} Implementado con \texttt{pymupdf4llm} y parsing semántico en Python.\\
+\textbf{Relevante (R):} Elimina la fricción de cuentas para estudiantes y estructura el texto para el LLM.\\
+\textbf{Temporizado (T):} Completado y probado en la Fase 1 del proyecto.
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=OE2: Motor de Análisis de Rúbrica y Detección Contextualizada]
+\textbf{Específico (S):} Desarrollar el servicio de IA que contraste el informe contra la pauta y los materiales del curso, entregando nota preliminar y desglose cualitativo.\\
+\textbf{Medible (M):} Tiempo de respuesta $\le 15$ segundos por informe en modo asíncrono.\\
+\textbf{Alcanzable (A):} Mediante arquitectura de workers en background en FastAPI con Claude 3.5 Sonnet y fallback Mock.\\
+\textbf{Relevante (R):} Aporta justificación cualitativa, evitando la arbitrariedad de detectores de caja negra.\\
+\textbf{Temporizado (T):} Finalizado en la Fase 2 del proyecto.
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=OE3: Generación, Edición y Despacho del Pool de Preguntas Flash]
+\textbf{Específico (S):} Crear un banco de preguntas dinámico (20–30 reactivos por informe) parametrizado por rigor (\textit{strict/medium/lax}), con edición docente y despacho por correo con token temporal seguro.\\
+\textbf{Medible (M):} 100\% de preguntas generadas a partir del informe específico del alumno; despacho mediante SMTP asíncrono con enlace de 1 solo uso (48h).\\
+\textbf{Alcanzable (A):} Utilizando \texttt{aiosmtplib} (Gmail SMTP gratuito sin costo) y tokens UUIDv4.\\
+\textbf{Relevante (R):} Concede el control pedagógico al docente antes de la examinación.\\
+\textbf{Temporizado (T):} Culminado en la Fase 3 del proyecto.
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=OE4: Plataforma de Flash Test en Tiempo Real y Ruteo Inteligente]
+\textbf{Específico (S):} Diseñar la interfaz de examinación en tiempo real por WebSocket y el algoritmo de ruteo que agenda citas presenciales a casos que cumplan criterios de revisión.\\
+\textbf{Medible (M):} Latencia de WebSocket $\le 100\text{ms}$, temporización estricta por reactivo y agendamiento del 100\% de estudiantes con flash score $< 50\%$, $\ge 95\%$ o 10\% aleatorio.\\
+\textbf{Alcanzable (A):} Desarrollado con WebSockets sobre FastAPI y Next.js App Router con Tailwind CSS.\\
+\textbf{Relevante (R):} Focaliza las horas presenciales del profesor exclusivamente en defensas justificadas.\\
+\textbf{Temporizado (T):} Verificado en la Fase 4 del proyecto.
+\end{tcolorbox}
+
+\subsection{Matriz de Trazabilidad}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{4.2cm} p{4.2cm} c X}
+\toprule
+\textbf{Dimensión del Problema} & \textbf{Causa Raíz} & \textbf{Objetivo} & \textbf{Entregable Concreto} \\
+\midrule
+Falsos positivos de detectores IA & Dependencia exclusiva de perplejidad estadística sin validar comprensión humana. & \textbf{OE2, OE3} & Evaluación con material de curso y pool de preguntas exclusivo del informe. \\
+\addlinespace
+Imposibilidad de interrogar a todos & Restricción de horas de atención del docente en cursos masivos. & \textbf{OE4} & Ruteo automático: solo defienden oralmente quienes tengan score $< 50\%$, $\ge 95\%$ o 10\% aleatorio. \\
+\addlinespace
+Fricción de adopción tecnológica & Alumnos se resisten a crear cuentas y recordar claves para un solo test. & \textbf{OE1, OE3} & Acceso sin login: nómina por CSV y enlace con token seguro de un solo uso por email. \\
+\addlinespace
+Evaluación no interdisciplinaria & La IA evalúa de forma aislada sin conocer la materia del curso. & \textbf{OE2} & Módulo de Materiales que inyecta guías y syllabus como contexto en el LLM. \\
+\addlinespace
+Pérdida de control del docente & Sistemas 100\% automáticos sin intervención humana (\textit{Human-in-the-loop}). & \textbf{OE3, OE4} & Editor interactivo de preguntas y panel para registrar acuerdos presenciales con ajuste de nota. \\
+\addlinespace
+Presupuesto cero en MVPs & Costos prohibitivos de APIs transaccionales y servidores de pago. & \textbf{OE3} & Despacho con Gmail SMTP gratuito (\texttt{aiosmtplib}) y arquitectura SQLite/FastAPI. \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz de Trazabilidad Problema vs. Objetivos}
+\end{table}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+% SECCIÓN 3: ANÁLISIS DE REQUERIMIENTOS (45%)
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Análisis de Requerimientos y Fundamentación (45\%)}
+
+\subsection{Bases Teóricas y Metodológicas}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Teoría de la Evaluación Auténtica (Grant Wiggins):} Establece que la asimilación del conocimiento se evidencia cuando el estudiante puede explicar, defender y aplicar sus decisiones metodológicas frente a preguntas directas. IntegriEval traslada el foco desde \textit{"¿el texto fue generado por una máquina?"} hacia \textit{"¿el estudiante domina los conceptos plasmados en su entrega?"}.
+    \item \textbf{Limitaciones Documentadas en Detectores de IA (Weber-Wulff et al., 2023):} Los clasificadores binarios presentan precisiones inferiores al $70\%$ en entornos universitarios. IntegriEval emplea la IA como asistente de lectura y generador de preguntas supervisado por humanos (\textit{Human-in-the-Loop}).
+\end{itemize}
+
+\subsection{Requerimientos Funcionales (RF)}
+\begin{enumerate}[label=\textbf{RF\arabic*.}]
+    \item \textbf{Gestión de Asignaturas:} El sistema permite al docente crear y gestionar asignaturas indicando nombre y periodo.
+    \item \textbf{Carga Masiva de Nómina (CSV):} Ingesta de archivos CSV con nombres y correos institucionales de alumnos sin requerir contraseñas.
+    \item \textbf{Configuración de Parámetros:} Definición de pauta/prompt libre, rigor (\textit{strict/medium/lax}), tamaño de pool y umbrales.
+    \item \textbf{Materiales de Apoyo:} Subida de syllabus y guías en PDF/DOCX convertidos a Markdown para contexto del LLM.
+    \item \textbf{Subida Masiva de Trabajos:} Carga en lote de PDFs con auto-asociación heurística o manual por estudiante.
+    \item \textbf{Conversión Estructurada a Markdown:} Extracción de alta fidelidad con \texttt{pymupdf4llm} preservando títulos y tablas.
+    \item \textbf{Evaluación Asíncrona con IA:} Cálculo de nota preliminar, feedback cualitativo y porcentaje de detección de IA.
+    \item \textbf{Gestión del Pool de Preguntas:} Edición de alternativas, agregado de reactivos propios y selección aleatoria/manual de 10 preguntas.
+    \item \textbf{Despacho Asíncrono por Correo:} Envío de invitación con token UUIDv4 (vigencia 48h) vía Gmail SMTP (\texttt{aiosmtplib}).
+    \item \textbf{Flash Test WebSocket en Tiempo Real:} Examinación cronometrada por pregunta, protección contra caídas y feedback final.
+    \item \textbf{Ruteo y Agendamiento Automático:} Agendamiento en el primer bloque libre del profesor para alumnos convocados a oficina.
+    \item \textbf{Cierre de Cita y Ajuste de Calificación:} Registro de acuerdos presenciales y actualización de la nota final del alumno.
+\end{enumerate}
+
+\subsection{Requerimientos No Funcionales (RNF)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{RNF1 (Rendimiento):} Soporte de 100 conexiones WebSocket concurrentes con latencia $\le 50\text{ms}$.
+    \item \textbf{RNF2 (Seguridad):} Tokens de examen UUIDv4 de alta entropía y contraseñas de docentes protegidas con \texttt{bcrypt} ($\text{factor} \ge 12$).
+    \item \textbf{RNF3 (Resiliencia):} Mecanismo de \textit{fallback} automático a Mock Engine en caso de desconexión con la API de Anthropic.
+    \item \textbf{RNF4 (Usabilidad):} Interfaz Next.js + Tailwind CSS adaptada a accesibilidad WCAG 2.1 AA con tema oscuro de alto contraste.
+    \item \textbf{RNF5 (Costo Cero):} Operatividad $100\%$ sustentada en tecnologías de código abierto (SQLite, FastAPI, Gmail SMTP).
+\end{itemize}
+
+\subsection{Evaluación Crítica de Alternativas Técnicas}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.2cm} p{4cm} p{3.2cm} X}
+\toprule
+\textbf{Dimensión} & \textbf{Alternativas Evaluadas} & \textbf{Selección} & \textbf{Justificación Técnica} \\
+\midrule
+\textbf{Acceso Alumno} & 
+1. Cuenta y Password.\newline 
+2. SSO Institucional.\newline 
+3. Token vía Email. & 
+\textbf{Token vía Email} & 
+Elimina fricción de registro; el docente no gestiona claves y el token valida posesión del correo oficial. \\
+\addlinespace
+\textbf{Estrategia de Integridad} & 
+1. Detectores de caja negra.\newline 
+2. Proctored Browser.\newline 
+3. Flash Test Contextual. & 
+\textbf{Flash Test Contextual} & 
+Evita falsos positivos evaluando la autoría real en tiempo real mediante preguntas del propio trabajo. \\
+\addlinespace
+\textbf{Conversión PDF} & 
+1. Texto plano (pypdf).\newline 
+2. OCR Tesseract.\newline 
+3. \texttt{pymupdf4llm}. & 
+\textbf{\texttt{pymupdf4llm}} & 
+Conserva jerarquía de encabezados, tablas y listas con $40\%$ menos de ruido léxico para el LLM. \\
+\addlinespace
+\textbf{Servicio de Email} & 
+1. SaaS de pago (SendGrid).\newline 
+2. Servidor Postfix VPS.\newline 
+3. Gmail SMTP asíncrono. & 
+\textbf{Gmail SMTP (\texttt{aiosmtplib})} & 
+Cero costo para el MVP con hasta 500 correos diarios mediante contraseña de aplicación. \\
+\bottomrule
+\end{tabularx}
+\caption{Evaluación Crítica de Alternativas Tecnológicas}
+\end{table}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+% SECCIÓN 4: PLANIFICACIÓN Y PRODUCT BACKLOG (20%)
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Planificación del Proyecto y Product Backlog (20\%)}
+
+\subsection{Resumen de Épicas y Estimación de Esfuerzo (61 Story Points)}
+
+\begin{table}[h!]
+\centering
+\begin{tabularx}{\textwidth}{X c c c}
+\toprule
+\textbf{Épica} & \textbf{Historias de Usuario} & \textbf{Prioridad MoSCoW} & \textbf{Story Points} \\
+\midrule
+\textbf{ÉPICA 1:} Gestión Académica y Nómina Sin Cuentas & US-01, US-02 & \textit{Must Have} & 8 SP \\
+\textbf{ÉPICA 2:} Ingesta Masiva, Conversión a Markdown y Materiales & US-03, US-04 & \textit{Must Have} & 13 SP \\
+\textbf{ÉPICA 3:} Motor de Evaluación Contextual y Detección IA & US-05, US-06 & \textit{Must / Should} & 11 SP \\
+\textbf{ÉPICA 4:} Gestión Interactiva del Pool de Preguntas & US-07 & \textit{Must Have} & 8 SP \\
+\textbf{ÉPICA 5:} Motor de Despacho y Flash Test en Tiempo Real & US-08, US-09 & \textit{Must Have} & 13 SP \\
+\textbf{ÉPICA 6:} Agenda de Defensas y Cierre de Calificaciones & US-10, US-11 & \textit{Must Have} & 8 SP \\
+\midrule
+\textbf{TOTAL GENERAL} & \textbf{11 Historias Refinadas} & & \textbf{61 SP} \\
+\bottomrule
+\end{tabularx}
+\caption{Resumen del Product Backlog por Épicas}
+\end{table}
+
+\subsection{Historias de Usuario Representativas y Criterios de Aceptación}
+
+\begin{tcolorbox}[title=US-02: Importación de Estudiantes vía CSV (Épica 1 — 5 SP)]
+\textbf{Como:} Docente o ayudante de cátedra.\\
+\textbf{Quiero:} Subir un archivo CSV con la lista de mis alumnos (nombre y correo).\\
+\textbf{Para:} Registrar a toda la sección en segundos sin que ellos deban crear una cuenta.\\
+\textbf{Criterios de Aceptación (Gherkin):}
+\begin{itemize}
+    \item \textbf{Dado} un archivo CSV con formato \texttt{Nombre,Correo} con codificación UTF-8 BOM.
+    \item \textbf{Cuando} el docente lo sube en la pestaña \textit{"2. Estudiantes"}.
+    \item \textbf{Entonces} el backend procesa las filas, descarta correos duplicados en el curso e informa el total de alumnos creados.
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=US-05: Análisis Automatizado de Pauta y Detección de IA (Épica 3 — 8 SP)]
+\textbf{Como:} Profesor evaluador.\\
+\textbf{Quiero:} Que la IA analice cada trabajo contra la pauta y los materiales de clase.\\
+\textbf{Para:} Obtener una nota preliminar justificada, desglose por rúbrica y porcentaje de probabilidad de IA.\\
+\textbf{Criterios de Aceptación (Gherkin):}
+\begin{itemize}
+    \item \textbf{Dado} un informe PDF en estado \texttt{"processing"}.
+    \item \textbf{Cuando} la IA completa el análisis con Claude 3.5 Sonnet.
+    \item \textbf{Entonces} el estado cambia a \texttt{"done"}, persistiendo nota, feedback cualitativo y desglose en BD.
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=US-08: Despacho Asíncrono de Flash Test por Correo (Épica 5 — 5 SP)]
+\textbf{Como:} Sistema evaluador.\\
+\textbf{Quiero:} Enviar un correo HTML institucional con un enlace tokenizado de un solo uso.\\
+\textbf{Para:} Que el estudiante acceda a rendir su Flash Test seguro sin iniciar sesión.\\
+\textbf{Criterios de Aceptación (Gherkin):}
+\begin{itemize}
+    \item \textbf{Dado} un set de 10 preguntas aprobado por el profesor.
+    \item \textbf{Cuando} se ejecuta \texttt{send\_flash\_test()}.
+    \item \textbf{Entonces} se genera un token UUIDv4 con 48h de vigencia y se despacha el correo vía \texttt{aiosmtplib}.
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=US-10: Ruteo Inteligente y Agendamiento Automático de Citas (Épica 6 — 5 SP)]
+\textbf{Como:} Plataforma IntegriEval.\\
+\textbf{Quiero:} Clasificar el resultado del flash test y agendar una cita en el primer bloque libre del profesor.\\
+\textbf{Para:} Coordinar la defensa presencial automáticamente si el alumno obtuvo puntaje bajo, alto o aleatorio.\\
+\textbf{Criterios de Aceptación (Gherkin):}
+\begin{itemize}
+    \item \textbf{Dado} un estudiante con score flash del 40\% (umbral bajo $< 50\%$).
+    \item \textbf{Cuando} finaliza la sesión del flash test.
+    \item \textbf{Entonces} se marca \texttt{review\_required = True}, se asigna el primer bloque disponible del profesor y se envía la notificación de cita por correo.
+\end{itemize}
+\end{tcolorbox}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+% SECCIÓN 5: CONCLUSIONES
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusiones y Valor Estratégico}
+IntegriEval resuelve la tensión contemporánea entre la adopción de herramientas de IA generativa y la exigencia de certificar competencias académicas fidedignas. Al reemplazar los detectores tradicionales de caja negra por un \textbf{modelo híbrido de análisis contextualizado, evaluación flash reactiva y defensa oral focalizada}, la plataforma optimiza el tiempo docente, garantiza transparencia ética y entrega una experiencia ágil y justa para toda la comunidad universitaria.
+
+\end{document}
