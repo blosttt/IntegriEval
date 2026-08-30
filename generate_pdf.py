@@ -111,7 +111,7 @@ def build_pdf(filename="documento_ingenieria_integrieval.pdf"):
     story.append(t_box)
     story.append(Spacer(1, 140))
     
-    story.append(Paragraph("<b>Autoría:</b> Equipo de Desarrollo Estudiantil IntegriEval", styles['CoverMeta']))
+    story.append(Paragraph("<b>Equipo de Desarrollo:</b> Sebastian Cisternas & Benjamin Sobarzo", styles['CoverMeta']))
     story.append(Paragraph("Facultad de Ingeniería y Ciencias de la Computación", styles['CoverMeta']))
     story.append(PageBreak())
 

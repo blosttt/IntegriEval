@@ -15,12 +15,12 @@
 \usepackage{hyperref}
 
 % Paleta de Colores Corporativa
-\definecolor{primary}{RGB}{37, 99, 235}     % Azul Royal
-\definecolor{secondary}{RGB}{99, 102, 241}  % Índigo
-\definecolor{darkbg}{RGB}{15, 23, 42}       % Pizarra Oscura
+\definecolor{primary}{RGB}{37, 99, 235}     % Azul Royal (#2563EB)
+\definecolor{secondary}{RGB}{99, 102, 241}  % Índigo (#6366F1)
+\definecolor{darkbg}{RGB}{15, 23, 42}       % Pizarra Oscura (#0F172A)
 \definecolor{accentgreen}{RGB}{16, 185, 129}% Verde Éxito
 \definecolor{accentred}{RGB}{239, 68, 68}   % Rojo Alerta
-\definecolor{lightgray}{RGB}{248, 250, 252} % Gris Claro
+\definecolor{lightgray}{RGB}{248, 250, 252} % Gris Claro (#F8FAFC)
 \definecolor{bordercolor}{RGB}{226, 232, 240}
 
 % Configuración de Hipervínculos
@@ -45,10 +45,14 @@
 \tcbset{
     colback=lightgray,
     colframe=secondary,
-    arc=4mm,
+    arc=3mm,
     boxrule=1pt,
     fonttitle=\bfseries\color{white},
-    colbacktitle=secondary
+    colbacktitle=secondary,
+    left=6pt,
+    right=6pt,
+    top=4pt,
+    bottom=4pt
 }
 
 % Formato de Secciones
@@ -63,27 +67,28 @@
 % ─────────────────────────────────────────────────────────────────────────────
 \begin{titlepage}
     \centering
-    \vspace*{1.5cm}
+    \vspace*{1.2cm}
     
     {\Huge \textbf{\color{primary} IntegriEval}}\\[0.4cm]
-    {\Large \textbf{Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash}}\\[1.5cm]
+    {\Large \textbf{Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash}}\\[1.2cm]
     
     \begin{tcolorbox}[colback=primary!5!white,colframe=primary,title=Documento de Especificación Formal de Ingeniería de Software]
         \centering
         \vspace{0.2cm}
         \textbf{Asignatura / Proyecto:} Proyecto de Ingeniería de Software / Taller de Título\\
-        \textbf{Fecha:} Agosto 2026 \quad $\vert$ \quad \textbf{Versión:} 2.1.0 (Revisión de Objetivos)\\
+        \textbf{Fecha:} Agosto 2026 \quad $\vert$ \quad \textbf{Versión:} 2.1.0\\
         \textbf{Entorno:} Educación Superior / Cátedras Universitarias
         \vspace{0.2cm}
     \end{tcolorbox}
     
-    \vspace{2.5cm}
+    \vspace{2.2cm}
     
     \begin{minipage}{0.45\textwidth}
         \begin{flushleft} \large
             \textbf{Equipo de Desarrollo:}\\
-            Equipo Estudiantil IntegriEval\\
-            Facultad de Ingeniería
+            Sebastian Cisternas\\
+            Benjamin Sobarzo\\[0.2cm]
+            \small Facultad de Ingeniería
         \end{flushleft}
     \end{minipage}
     \hfill
@@ -107,7 +112,7 @@
 \section{Definición Clara del Problema (10\%)}
 
 \subsection{Contexto y Antecedentes}
-La proliferación y democratización de los Modelos de Lenguaje Grande (LLMs) como GPT-4, Claude y Gemini ha alterado irreversiblemente los mecanismos de evaluación en la educación superior. En la dinámica actual, los estudiantes cargan sus informes de laboratorio, ensayos y proyectos semestrales a través del LMS institucional (Canvas, Moodle, Blackboard).
+La proliferación y democratización de los Modelos de Lenguaje Grande (LLMs) como GPT-4, Claude y Gemini, entre otros, ha alterado irreversiblemente los mecanismos de evaluación en la educación superior. En la dinámica actual, los estudiantes cargan sus informes de laboratorio, ensayos y proyectos semestrales a través del LMS institucional (Canvas, Moodle, Blackboard).
 
 Los equipos docentes deben enfrentarse a la revisión de cientos de páginas escritas en formato digital (PDF/Word), careciendo de instrumentos confiables y pedagógicamente justos para validar si el contenido refleja las competencias reales del estudiante o si fue generado íntegramente por un sistema de IA sin apropiación de conocimiento.
 
@@ -329,12 +334,12 @@ Cero costo para el MVP con hasta 500 correos diarios mediante contraseña de apl
 \toprule
 \textbf{Épica} & \textbf{Historias de Usuario} & \textbf{Prioridad MoSCoW} & \textbf{Story Points} \\
 \midrule
-\textbf{ÉPICA 1:} Gestión Académica y Nómina Sin Cuentas & US-01, US-02 & \textit{Must Have} & 8 SP \\
-\textbf{ÉPICA 2:} Ingesta Masiva, Conversión a Markdown y Materiales & US-03, US-04 & \textit{Must Have} & 13 SP \\
-\textbf{ÉPICA 3:} Motor de Evaluación Contextual y Detección IA & US-05, US-06 & \textit{Must / Should} & 11 SP \\
-\textbf{ÉPICA 4:} Gestión Interactiva del Pool de Preguntas & US-07 & \textit{Must Have} & 8 SP \\
-\textbf{ÉPICA 5:} Motor de Despacho y Flash Test en Tiempo Real & US-08, US-09 & \textit{Must Have} & 13 SP \\
-\textbf{ÉPICA 6:} Agenda de Defensas y Cierre de Calificaciones & US-10, US-11 & \textit{Must Have} & 8 SP \\
+\textbf{ÉPICA 1:} Gestión Académica y Nómina Sin Cuentas (OE1) & US-01, US-02 & \textit{Must Have} & 8 SP \\
+\textbf{ÉPICA 2:} Ingesta Masiva, Conversión a Markdown y Materiales (OE1) & US-03, US-04 & \textit{Must Have} & 13 SP \\
+\textbf{ÉPICA 3:} Motor de Evaluación Contextual y Detección IA (OE2) & US-05, US-06 & \textit{Must / Should} & 11 SP \\
+\textbf{ÉPICA 4:} Gestión Interactiva del Pool de Preguntas (OE3) & US-07 & \textit{Must Have} & 8 SP \\
+\textbf{ÉPICA 5:} Motor de Despacho y Flash Test en Tiempo Real (OE3/OE4) & US-08, US-09 & \textit{Must Have} & 13 SP \\
+\textbf{ÉPICA 6:} Agenda de Defensas y Cierre de Calificaciones (OE4/OE5) & US-10, US-11 & \textit{Must Have} & 8 SP \\
 \midrule
 \textbf{TOTAL GENERAL} & \textbf{11 Historias Refinadas} & & \textbf{61 SP} \\
 \bottomrule
