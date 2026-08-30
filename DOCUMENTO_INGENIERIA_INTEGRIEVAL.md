@@ -1,9 +1,9 @@
 # Documento de Ingeniería de Software y Especificación de Proyecto: IntegriEval
 
 **Proyecto:** IntegriEval — Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash  
-**Autores:** Equipo de Desarrollo Estudiantil  
+**Autores:** Sebastian Cisternas, Benjamin Sobarzo  
 **Fecha:** Agosto 2026  
-**Versión:** 2.1.0  
+**Versión:** 2.1.1  
 
 ---
 
@@ -54,13 +54,13 @@ El problema central se articula en torno a tres factores críticos:
 
 ## 2. Definición de Objetivos SMART y Matriz de Trazabilidad (25%)
 
-### 2.1 Objetivo General (Corregido y Refinado)
+### 2.1 Objetivo General
 
 > **Desarrollar una plataforma web para la evaluación semi-automatizada y verificación de autoría de trabajos académicos, combinando análisis de pautas asistido por inteligencia artificial contextualizada, generación interactiva de reactivos flash y agendamiento focalizado de defensas presenciales.**
 
 ---
 
-### 2.2 Objetivos Específicos (Criterios SMART Corregidos)
+### 2.2 Objetivos Específicos (Criterios SMART por Fases)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -74,7 +74,7 @@ El problema central se articula en torno a tres factores críticos:
 │                         │ hasta 100 archivos en una sola operación.                                             │
 │ Alcanzable (A)          │ Implementado con `pymupdf4llm` y endpoints asíncronos en FastAPI.                     │
 │ Relevante (R)           │ Elimina la fricción de registro para estudiantes y estructura el texto para el LLM.  │
-│ Temporizado (T)         │ Completado en el Sprint 1 (Fase de Ingesta).                                          │
+│ Temporizado (T)         │ Ejecutado en la Fase 1 (Ingesta y Gestión de Cursos).                                 │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,7 +90,7 @@ El problema central se articula en torno a tres factores críticos:
 │                         │ rúbrica y calibración según 3 niveles de rigor (strict, medium, lax).                 │
 │ Alcanzable (A)          │ Mediante workers asíncronos con Claude 3.5 Sonnet y motor de contingencia Mock.       │
 │ Relevante (R)           │ Aporta justificación cualitativa y contextual, superando detectores de caja negra.    │
-│ Temporizado (T)         │ Completado en el Sprint 2 (Fase de Análisis).                                         │
+│ Temporizado (T)         │ Ejecutado en la Fase 2 (Análisis y Evaluación Contextual).                            │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -106,7 +106,7 @@ El problema central se articula en torno a tres factores críticos:
 │                         │ a través de Gmail SMTP gratuito (`aiosmtplib`).                                       │
 │ Alcanzable (A)          │ Panel interactivo en Next.js y servicio de correo asíncrono en Python.                │
 │ Relevante (R)           │ Asegura el paradigma Human-in-the-Loop antes de enviar las evaluaciones.              │
-│ Temporizado (T)         │ Completado en el Sprint 3 (Fase de Reactivos y Despacho).                              │
+│ Temporizado (T)         │ Ejecutado en la Fase 3 (Generación de Reactivos y Despacho).                          │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -122,7 +122,7 @@ El problema central se articula en torno a tres factores críticos:
 │                         │ 100% de estudiantes con score flash < 50%, >= 95% o 10% aleatorio de control.         │
 │ Alcanzable (A)          │ WebSockets sobre Starlette/FastAPI y frontend reactivo con Tailwind CSS.              │
 │ Relevante (R)           │ Focaliza el tiempo presencial del docente únicamente en defensas necesarias.          │
-│ Temporizado (T)         │ Completado en el Sprint 4 (Fase de Examinación y Citas).                              │
+│ Temporizado (T)         │ Ejecutado en la Fase 4 (Examinación, Agenda y Verificación).                          │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -130,14 +130,15 @@ El problema central se articula en torno a tres factores críticos:
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ OBJETIVO ESPECÍFICO 5 (OE5): Validación Integral, Auditoría y Cierre de Calificaciones                          │
 ├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
-│ Enunciado               │ Validar la solución técnica mediante pruebas de integración, paneles de auditoría     │
-│                         │ inmutable de acciones docentes y mecanismos de ajuste manual definitivo de notas.     │
-│ Específico (S)          │ Trazabilidad de cambios de notas, registro de acuerdos presenciales y audit logs.    │
-│ Medible (M)             │ 100% de eventos críticos auditados con timestamp/usuario y tiempo de respuesta de API │
-│                         │ <= 200ms en condiciones normales de uso.                                             │
+│ Enunciado               │ Validar integralmente la plataforma en la fase de cierre mediante pruebas de          │
+│                         │ integración, auditoría inmutable de eventos críticos y mecanismos de ajuste manual    │
+│                         │ definitivo de notas presenciales.                                                     │
+│ Específico (S)          │ Trazabilidad de decisiones docentes, registro de acuerdos de citas y audit logs.      │
+│ Medible (M)             │ 100% de eventos críticos auditados con timestamp/usuario, tiempo de respuesta de API  │
+│                         │ <= 200ms y verificación completa de los flujos de calificación final.                 │
 │ Alcanzable (A)          │ Módulo de auditoría estructurado en SQLAlchemy y panel administrativo de métricas.    │
 │ Relevante (R)           │ Garantiza la transparencia legal y ética ante apelaciones estudiantiles.              │
-│ Temporizado (T)         │ Completado en el Sprint 5 (Fase de Verificación y Cierre).                            │
+│ Temporizado (T)         │ Ejecutado en la Fase 4 (Cierre, Auditoría y Validación Final).                        │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -145,14 +146,14 @@ El problema central se articula en torno a tres factores críticos:
 
 ### 2.3 Matriz de Trazabilidad Actualizada (Problema vs. Objetivos)
 
-| Dimensión del Problema | Causa Raíz Identificada | Objetivo SMART Vinculado | Resultado Entregable Esperado |
-|---|---|---|---|
-| **Falsos positivos de detectores IA tradicionales** | Dependencia exclusiva de métricas de perplejidad estadística sin validación de comprensión humana. | **OE2 & OE3** | Evaluación contextualizada con material de curso y generación de preguntas de autoría exclusivas del informe. |
-| **Imposibilidad de interrogar al 100% de los estudiantes** | Restricción temporal y sobrecarga de horas de atención del docente en cátedras numerosas. | **OE4** | Ruteo automático: solo rinden defensa oral aquellos con flash score $< 50\%$, $\ge 95\%$ o el $10\%$ aleatorio de control. |
-| **Fricción operativa en adopción de software** | Resistencia de alumnos a crear nuevas cuentas y recordar credenciales para un único examen. | **OE1 & OE3** | Acceso sin cuenta: el docente carga nómina CSV y el alumno ingresa directamente mediante enlace tokenizado por correo. |
-| **Evaluaciones genéricas no interdisciplinarias** | Los modelos de IA evalúan de forma aislada sin conocer los contenidos impartidos en clase. | **OE2** | Módulo de *Materiales de Curso* que inyecta el syllabus y guías docentes en el prompt del evaluador. |
-| **Falta de control del docente sobre la IA** | Sistemas de evaluación 100% automáticos que no permiten supervisión humana (*Human-in-the-loop*). | **OE3, OE4 & OE5** | Interfaz interactiva de edición del pool de preguntas y panel para registrar acuerdos de reunión presencial con ajuste de nota. |
-| **Presupuesto cero / Entorno estudiantil** | Costos elevados de APIs de correo transaccional (SendGrid, Mailgun) e infraestructuras de pago. | **OE3** | Utilización de Gmail SMTP gratuito (`aiosmtplib`) y arquitectura modular SQLite/FastAPI/Next.js de bajo consumo. |
+| Dimensión del Problema | Causa Raíz Identificada | Objetivo SMART | Fase de Ejecución | Entregable Concreto |
+|---|---|---|---|---|
+| **Falsos positivos de detectores IA tradicionales** | Dependencia exclusiva de métricas de perplejidad estadística sin validación de comprensión humana. | **OE2 & OE3** | **Fase 2 & Fase 3** | Evaluación contextualizada con material de curso y pool de preguntas exclusivo del informe. |
+| **Imposibilidad de interrogar al 100% de los estudiantes** | Restricción temporal y sobrecarga de horas de atención del docente en cátedras numerosas. | **OE4** | **Fase 4** | Ruteo automático: solo rinden defensa oral aquellos con flash score $< 50\%$, $\ge 95\%$ o el $10\%$ aleatorio de control. |
+| **Fricción operativa en adopción de software** | Resistencia de alumnos a crear nuevas cuentas y recordar credenciales para un único examen. | **OE1 & OE3** | **Fase 1 & Fase 3** | Acceso sin cuenta: el docente carga nómina CSV y el alumno ingresa directamente mediante enlace tokenizado por correo. |
+| **Evaluaciones genéricas no interdisciplinarias** | Los modelos de IA evalúan de forma aislada sin conocer los contenidos impartidos en clase. | **OE2** | **Fase 2** | Módulo de *Materiales de Curso* que inyecta el syllabus y guías docentes en el prompt del evaluador. |
+| **Falta de control del docente sobre la IA** | Sistemas de evaluación 100% automáticos que no permiten supervisión humana (*Human-in-the-loop*). | **OE3, OE4 & OE5** | **Fase 3 & Fase 4** | Interfaz interactiva de edición del pool de preguntas y panel para registrar acuerdos de reunión presencial con ajuste de nota. |
+| **Presupuesto cero / Entorno estudiantil** | Costos elevados de APIs de correo transaccional (SendGrid, Mailgun) e infraestructuras de pago. | **OE3** | **Fase 3** | Utilización de Gmail SMTP gratuito (`aiosmtplib`) y arquitectura modular SQLite/FastAPI/Next.js de bajo consumo. |
 
 ---
 
@@ -233,27 +234,27 @@ El problema central se articula en torno a tres factores críticos:
 ### 4.1 Resumen de Épicas y Estimación de Esfuerzo (61 Story Points)
 
 ```
-╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
-║                             RESUMEN DE ESTIMACIÓN POR ÉPICA                                   ║
-╠═════════════════════════════════════════════════════════════════╦═══════════════╦══════════════╣
-║ Épica                                                           ║ Historias     ║ Total SP     ║
-╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╣
-║ ÉPICA 1: Gestión Académica y Nómina Sin Cuentas (OE1)           ║ US-01, US-02  ║ 8 SP         ║
-║ ÉPICA 2: Ingesta Masiva, Conversión a Markdown y Materiales (OE1)║ US-03, US-04 ║ 13 SP        ║
-║ ÉPICA 3: Motor de Evaluación Contextual y Detección con IA (OE2)║ US-05, US-06  ║ 11 SP        ║
-║ ÉPICA 4: Gestión Interactiva del Pool de Preguntas Flash (OE3)  ║ US-07         ║ 8 SP         ║
-║ ÉPICA 5: Motor de Despacho y Flash Test en Tiempo Real (OE3/OE4)║ US-08, US-09  ║ 13 SP        ║
-║ ÉPICA 6: Agenda de Defensas y Cierre de Calificaciones (OE4/OE5)║ US-10, US-11  ║ 8 SP         ║
-╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╣
-║ TOTAL GENERAL DEL BACKLOG                                       ║ 11 Historias  ║ 61 SP        ║
-╚═════════════════════════════════════════════════════════════════╩═══════════════╩══════════════╝
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                             RESUMEN DE ESTIMACIÓN POR ÉPICA Y FASES                                   ║
+╠═════════════════════════════════════════════════════════════════╦═══════════════╦══════════════╦══════╣
+║ Épica                                                           ║ Historias     ║ Total SP     ║ Fase ║
+╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╬══════╣
+║ ÉPICA 1: Gestión Académica y Nómina Sin Cuentas (OE1)           ║ US-01, US-02  ║ 8 SP         ║ F1   ║
+║ ÉPICA 2: Ingesta Masiva, Conversión a Markdown y Materiales (OE1)║ US-03, US-04 ║ 13 SP        ║ F1/F2║
+║ ÉPICA 3: Motor de Evaluación Contextual y Detección con IA (OE2)║ US-05, US-06  ║ 11 SP        ║ F2   ║
+║ ÉPICA 4: Gestión Interactiva del Pool de Preguntas Flash (OE3)  ║ US-07         ║ 8 SP         ║ F3   ║
+║ ÉPICA 5: Motor de Despacho y Flash Test en Tiempo Real (OE3/OE4)║ US-08, US-09  ║ 13 SP        ║ F3/F4║
+║ ÉPICA 6: Agenda de Defensas, Auditoría y Cierre (OE4/OE5)       ║ US-10, US-11  ║ 8 SP         ║ F4   ║
+╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╬══════╣
+║ TOTAL GENERAL DEL BACKLOG                                       ║ 11 Historias  ║ 61 SP        ║ 4 F. ║
+╚═════════════════════════════════════════════════════════════════╩═══════════════╩══════════════╩══════╝
 ```
 
 ---
 
 ### 4.2 Historias de Usuario Representativas y Criterios de Aceptación (Gherkin)
 
-#### US-02: Importación de Estudiantes vía CSV (Épica 1 — 5 SP | MUST HAVE)
+#### US-02: Importación de Estudiantes vía CSV (Épica 1 — 5 SP | MUST HAVE | Fase 1)
 - **Como:** Docente o ayudante de cátedra.
 - **Quiero:** Subir un archivo CSV con la lista de mis alumnos (nombre y correo).
 - **Para:** Registrar a toda la sección en segundos sin que ellos deban crear una cuenta.
@@ -265,7 +266,7 @@ El problema central se articula en torno a tres factores críticos:
     Entonces el backend procesa las filas, omite correos duplicados y muestra el total de alumnos creados.
   ```
 
-#### US-05: Análisis Automatizado de Pauta y Detección de IA (Épica 3 — 8 SP | MUST HAVE)
+#### US-05: Análisis Automatizado de Pauta y Detección de IA (Épica 3 — 8 SP | MUST HAVE | Fase 2)
 - **Como:** Profesor evaluador.
 - **Quiero:** Que la IA analice cada trabajo contra la pauta y los materiales de clase.
 - **Para:** Obtener una nota preliminar justificada, desglose por rúbrica y porcentaje de probabilidad de IA.
@@ -277,7 +278,7 @@ El problema central se articula en torno a tres factores críticos:
     Entonces el estado cambia a "done", persistiendo la nota preliminar, feedback y desglose en JSON.
   ```
 
-#### US-08: Despacho Asíncrono de Flash Test por Correo (Épica 5 — 5 SP | MUST HAVE)
+#### US-08: Despacho Asíncrono de Flash Test por Correo (Épica 5 — 5 SP | MUST HAVE | Fase 3)
 - **Como:** Sistema evaluador.
 - **Quiero:** Enviar un correo HTML institucional con un enlace tokenizado de un solo uso.
 - **Para:** Que el estudiante acceda a rendir su Flash Test seguro sin iniciar sesión.
@@ -289,7 +290,7 @@ El problema central se articula en torno a tres factores críticos:
     Entonces se genera un token UUIDv4 con 48h de vigencia y se despacha el correo vía aiosmtplib.
   ```
 
-#### US-10: Ruteo Inteligente y Agendamiento Automático de Citas (Épica 6 — 5 SP | MUST HAVE)
+#### US-10: Ruteo Inteligente y Agendamiento Automático de Citas (Épica 6 — 5 SP | MUST HAVE | Fase 4)
 - **Como:** Plataforma IntegriEval.
 - **Quiero:** Clasificar el resultado del flash test y agendar una cita en el primer bloque libre del profesor.
 - **Para:** Coordinar la defensa presencial automáticamente si el alumno obtuvo puntaje bajo, alto o aleatorio.

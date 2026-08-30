@@ -195,7 +195,7 @@ def build_pdf(filename="documento_ingenieria_integrieval.pdf"):
         ("OE4: Evaluación en Tiempo Real y Ruteo Automatizado de Citas",
          "<b>Enunciado:</b> Construir una interfaz de examinación en tiempo real para estudiantes y un algoritmo de ruteo que asigne citas de defensa presencial en los bloques libres del docente.<br/><b>SMART:</b> Latencia WebSocket <= 100ms, temporizador estricto y agendamiento automático del 100% de estudiantes con score < 50%, >= 95% o 10% aleatorio. (Sprint 4)."),
         ("OE5: Validación Integral, Auditoría y Cierre de Calificaciones",
-         "<b>Enunciado:</b> Validar la solución técnica mediante pruebas de integración, paneles de auditoría inmutable de acciones docentes y mecanismos de ajuste manual definitivo de notas.<br/><b>SMART:</b> 100% de eventos auditados con timestamp/usuario, tiempo de respuesta de API <= 200ms y trazabilidad legal de notas. (Sprint 5).")
+         "<b>Enunciado:</b> Validar integralmente la plataforma en la fase de cierre mediante pruebas de integración, auditoría inmutable de eventos críticos y mecanismos de ajuste manual definitivo de notas presenciales.<br/><b>SMART:</b> 100% de eventos auditados con timestamp/usuario, tiempo de respuesta de API <= 200ms y trazabilidad legal de notas. (Fase 4 - Cierre y Validación).")
     ]
 
     for title, content in oe_cards:
