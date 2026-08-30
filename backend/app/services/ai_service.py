@@ -1,214 +1,358 @@
 import json
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from anthropic import Anthropic
 from app.core.database import settings
 
-def generate_questions_for_report(
-    report_text: str,
-    teacher_prompt: str | None,
-    num_questions: int,
-    time_per_question: int
-) -> List[Dict[str, Any]]:
+# ─────────────────────────────────────────────────────────────────────────────
+# REPORT ANALYSIS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def analyze_report(
+    markdown_text: str,
+    rubric_prompt: Optional[str],
+    material_context: Optional[str] = None,
+) -> Dict[str, Any]:
     """
-    Generates a list of questions based on the report text and teacher guidelines.
-    Uses Anthropic Claude API, or falls back to Mock AI if USE_MOCK_AI=True.
+    Analyzes a student report against the teacher's rubric.
+    Returns: score_percentage, ai_detected_percentage, feedback, breakdown.
+    Uses Claude or Mock fallback.
     """
     if settings.USE_MOCK_AI:
-        return generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
-    
-    return generate_claude_questions(report_text, teacher_prompt, num_questions, time_per_question)
+        return analyze_report_mock(markdown_text, rubric_prompt)
+    return _analyze_report_claude(markdown_text, rubric_prompt, material_context)
 
-def generate_claude_questions(
-    report_text: str,
-    teacher_prompt: str | None,
-    num_questions: int,
-    time_per_question: int
-) -> List[Dict[str, Any]]:
+
+def _analyze_report_claude(
+    markdown_text: str,
+    rubric_prompt: Optional[str],
+    material_context: Optional[str],
+) -> Dict[str, Any]:
     if not settings.ANTHROPIC_API_KEY:
-        # Fallback to mock if API key is missing
-        print("Warning: ANTHROPIC_API_KEY is not set. Falling back to Mock AI.")
-        return generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
+        print("Warning: ANTHROPIC_API_KEY not set. Falling back to Mock AI.")
+        return analyze_report_mock(markdown_text, rubric_prompt)
 
     client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    
-    # Clean text to avoid context blowup
-    max_chars = 30000 # ~7000 tokens
-    truncated_text = report_text[:max_chars]
 
-    system_instructions = (
-        "Eres un evaluador académico experto. Tu tarea es generar un conjunto de preguntas de tipo 'flash' "
-        "basadas en el contenido de un informe entregado por un estudiante. El objetivo es verificar si el "
-        "estudiante realmente escribió y comprende el contenido del informe. "
-        "Las preguntas deben requerir conocimiento específico del informe (datos, metodologías, conclusiones, "
-        "fórmulas, autores citados o resultados) para que no puedan ser respondidas por una IA general externa "
-        "sin acceso al texto. "
-        "Debes responder ÚNICAMENTE con un objeto JSON válido que contenga la lista de preguntas. "
-        "No agregues texto explicativo antes ni después del JSON. El idioma debe ser español formal y académico."
+    max_chars = 30000
+    truncated_text = markdown_text[:max_chars]
+    material_section = ""
+    if material_context:
+        material_section = f"""
+--- MATERIAL DE REFERENCIA DEL CURSO ---
+{material_context[:10000]}
+--- FIN MATERIAL ---
+"""
+
+    system = (
+        "Eres un evaluador académico experto e imparcial. "
+        "Tu tarea es evaluar un trabajo académico entregado por un estudiante. "
+        "Debes responder ÚNICAMENTE con un objeto JSON válido. "
+        "No agregues texto antes ni después del JSON. Usa español formal."
     )
 
     prompt = f"""
-    Genera exactamente {num_questions} preguntas de tipo 'flash' basadas en el siguiente texto de un informe:
-    
-    --- TEXTO DEL INFORME ---
-    {truncated_text}
-    --- FIN TEXTO INFORME ---
-    
-    Instrucciones del profesor a considerar para la evaluación (rúbrica o tema):
-    "{teacher_prompt or 'Evaluar comprensión general de la metodología, resultados y conclusiones del documento.'}"
-    
-    Cada pregunta debe tener un tiempo límite de {time_per_question} segundos.
-    Solo admite dos tipos de preguntas:
-    1. "multiple_choice": 4 alternativas, la propiedad 'correct_answer' debe ser el índice de la opción correcta (un string: "0", "1", "2" o "3").
-    2. "true_false": opciones serán exactamente ["Verdadero", "Falso"], la propiedad 'correct_answer' debe ser "0" para Verdadero y "1" para Falso.
-    
-    El formato de salida JSON exacto requerido es:
-    {{
-      "questions": [
-        {{
-          "text": "¿Cuál es la pregunta...?",
-          "type": "multiple_choice",
-          "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
-          "correct_answer": "0",
-          "limit_seconds": {time_per_question}
-        }},
-        ...
-      ]
-    }}
-    """
+Evalúa el siguiente trabajo académico usando la pauta proporcionada por el profesor.
+
+{material_section}
+
+--- PAUTA DEL PROFESOR ---
+{rubric_prompt or "Evaluar comprensión general, metodología, resultados y conclusiones del trabajo."}
+--- FIN PAUTA ---
+
+--- TRABAJO DEL ESTUDIANTE (Markdown) ---
+{truncated_text}
+--- FIN TRABAJO ---
+
+Proporciona una evaluación detallada con el siguiente formato JSON exacto:
+{{
+  "score_percentage": 0.78,
+  "ai_detected_percentage": 0.15,
+  "feedback": "Párrafo general de retroalimentación al trabajo...",
+  "breakdown": {{
+    "metodologia": 0.80,
+    "resultados": 0.75,
+    "conclusiones": 0.80,
+    "redaccion": 0.75,
+    "cumplimiento_pauta": 0.80
+  }},
+  "strengths": ["Punto fuerte 1", "Punto fuerte 2"],
+  "weaknesses": ["Área de mejora 1", "Área de mejora 2"],
+  "ai_indicators": ["Indicador de IA 1 si aplica"]
+}}
+
+Criterios para ai_detected_percentage:
+- 0.0–0.2: Escritura claramente humana, estilo personal, errores naturales
+- 0.2–0.5: Posible asistencia de IA pero con aporte propio significativo
+- 0.5–0.8: Alta probabilidad de contenido generado por IA
+- 0.8–1.0: Texto casi completamente generado por IA
+"""
 
     try:
         message = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
-            temperature=0.2,
-            system=system_instructions,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+            temperature=0.1,
+            system=system,
+            messages=[{"role": "user", "content": prompt}]
         )
-        
-        # Parse JSON from response
         response_text = message.content[0].text.strip()
-        
-        # Handle cases where LLM surrounds with ```json ```
-        json_match = re.search(r"({.*})", response_text, re.DOTALL)
+        json_match = re.search(r"(\{.*\})", response_text, re.DOTALL)
         if json_match:
             response_text = json_match.group(1)
-            
-        data = json.loads(response_text)
-        questions = data.get("questions", [])
-        
-        # Ensure limit_seconds is set correctly
-        for q in questions:
-            q["limit_seconds"] = time_per_question
-            
-        return questions
-        
+        return json.loads(response_text)
     except Exception as e:
-        print(f"Error calling Claude API: {e}")
-        # Fallback to mock on API error
-        return generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
+        print(f"Error calling Claude API for analysis: {e}")
+        return analyze_report_mock(markdown_text, rubric_prompt)
 
-def generate_mock_questions(
+
+def analyze_report_mock(
+    markdown_text: str,
+    rubric_prompt: Optional[str],
+) -> Dict[str, Any]:
+    """Mock analysis for testing without API key."""
+    import random
+    score = round(random.uniform(0.55, 0.92), 2)
+    ai_pct = round(random.uniform(0.05, 0.45), 2)
+    return {
+        "score_percentage": score,
+        "ai_detected_percentage": ai_pct,
+        "feedback": (
+            f"[MOCK] El trabajo muestra un nivel de cumplimiento del {int(score*100)}% "
+            f"según la pauta. Se detectó un {int(ai_pct*100)}% de posible contenido "
+            "generado por IA. Se recomienda revisar la originalidad de las conclusiones."
+        ),
+        "breakdown": {
+            "metodologia": round(random.uniform(0.5, 1.0), 2),
+            "resultados": round(random.uniform(0.5, 1.0), 2),
+            "conclusiones": round(random.uniform(0.5, 1.0), 2),
+            "redaccion": round(random.uniform(0.5, 1.0), 2),
+            "cumplimiento_pauta": round(random.uniform(0.5, 1.0), 2),
+        },
+        "strengths": ["Estructura clara del documento", "Uso adecuado de referencias"],
+        "weaknesses": ["Profundidad insuficiente en el análisis", "Conclusiones genéricas"],
+        "ai_indicators": ["Frases formulaicas repetitivas"] if ai_pct > 0.3 else [],
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QUESTION GENERATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Rigor prompt fragments injected into question generation
+_RIGOR_INSTRUCTIONS = {
+    "strict": (
+        "Las preguntas deben ser MUY específicas y difíciles: citar datos exactos, "
+        "fórmulas, valores numéricos, nombres de autores, metodologías concretas y "
+        "conclusiones específicas del texto. Solo alguien que redactó el trabajo "
+        "personalmente podría responder correctamente."
+    ),
+    "medium": (
+        "Las preguntas deben requerir conocimiento sólido del contenido: metodología, "
+        "resultados principales, conclusiones y conceptos clave. "
+        "No deben ser respondibles sin haber leído el trabajo."
+    ),
+    "lax": (
+        "Las preguntas deben evaluar comprensión general del trabajo: tema principal, "
+        "objetivo, conclusión general y enfoque metodológico. "
+        "Nivel accesible pero que requiera haber leído el documento."
+    ),
+}
+
+
+def generate_questions_for_report(
     report_text: str,
-    teacher_prompt: str | None,
+    teacher_prompt: Optional[str],
     num_questions: int,
-    time_per_question: int
+    time_per_question: int,
+    rigor: str = "medium",
+    material_context: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Generates realistic questions for testing by parsing some words from the report
-    and inserting them into template questions.
+    Generates a pool of flash questions for a student's report.
+    Uses Claude or falls back to Mock.
     """
-    # Try to extract the first 100 characters or find some capitalized terms to look realistic
-    cleaned = re.sub(r'\s+', ' ', report_text)
-    words = [w for w in re.findall(r'\b[a-zA-ZáéíóúÁÉÍÓÚñÑ]{4,}\b', cleaned)]
-    
-    # Pick a few words as keywords
-    keywords = []
-    for w in words:
-        if w.istitle() and len(w) > 4 and w not in ["Para", "Como", "Este", "Esta", "Todo", "Sobre", "Desde"]:
-            keywords.append(w)
-    keywords = list(dict.fromkeys(keywords))[:10] # unique
-    
-    if len(keywords) < 3:
-        keywords = ["Proyecto", "Desarrollo", "Implementación", "Estudio", "Sistema"]
+    if settings.USE_MOCK_AI:
+        return _generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
+    return _generate_claude_questions(report_text, teacher_prompt, num_questions, time_per_question, rigor, material_context)
 
-    # Templates
+
+def _generate_claude_questions(
+    report_text: str,
+    teacher_prompt: Optional[str],
+    num_questions: int,
+    time_per_question: int,
+    rigor: str,
+    material_context: Optional[str],
+) -> List[Dict[str, Any]]:
+    if not settings.ANTHROPIC_API_KEY:
+        print("Warning: ANTHROPIC_API_KEY not set. Falling back to Mock AI.")
+        return _generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
+
+    client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    max_chars = 30000
+    truncated_text = report_text[:max_chars]
+    rigor_instruction = _RIGOR_INSTRUCTIONS.get(rigor, _RIGOR_INSTRUCTIONS["medium"])
+
+    material_section = ""
+    if material_context:
+        material_section = f"""
+--- MATERIAL DE REFERENCIA DEL CURSO ---
+{material_context[:8000]}
+--- FIN MATERIAL ---
+"""
+
+    system = (
+        "Eres un evaluador académico experto. Tu tarea es generar preguntas flash "
+        "personalizadas basadas en el informe de un estudiante, para verificar su autoría. "
+        "Responde ÚNICAMENTE con un objeto JSON válido. Usa español formal y académico."
+    )
+
+    prompt = f"""
+Genera exactamente {num_questions} preguntas de tipo 'flash' basadas en el siguiente trabajo:
+
+{material_section}
+
+--- TRABAJO DEL ESTUDIANTE ---
+{truncated_text}
+--- FIN TRABAJO ---
+
+Instrucciones adicionales del profesor:
+"{teacher_prompt or 'Evaluar comprensión general del trabajo.'}"
+
+Nivel de rigor requerido:
+{rigor_instruction}
+
+Reglas:
+- Solo dos tipos: "multiple_choice" (4 opciones) o "true_false" ([\"Verdadero\", \"Falso\"]).
+- Para multiple_choice: correct_answer es el índice string "0", "1", "2" o "3".
+- Para true_false: correct_answer es "0" (Verdadero) o "1" (Falso).
+- Las preguntas deben ser específicas al contenido de ESTE trabajo, no genéricas.
+- Tiempo límite por pregunta: {time_per_question} segundos.
+
+Formato JSON requerido:
+{{
+  "questions": [
+    {{
+      "text": "¿Cuál es la pregunta...?",
+      "type": "multiple_choice",
+      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+      "correct_answer": "0",
+      "limit_seconds": {time_per_question}
+    }}
+  ]
+}}
+"""
+
+    try:
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=4000,
+            temperature=0.3,
+            system=system,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        response_text = message.content[0].text.strip()
+        json_match = re.search(r"(\{.*\})", response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1)
+        data = json.loads(response_text)
+        questions = data.get("questions", [])
+        for q in questions:
+            q["limit_seconds"] = time_per_question
+        return questions
+    except Exception as e:
+        print(f"Error calling Claude API for questions: {e}")
+        return _generate_mock_questions(report_text, teacher_prompt, num_questions, time_per_question)
+
+
+def _generate_mock_questions(
+    report_text: str,
+    teacher_prompt: Optional[str],
+    num_questions: int,
+    time_per_question: int,
+) -> List[Dict[str, Any]]:
+    """Generates template-based mock questions for testing."""
+    cleaned = re.sub(r'\s+', ' ', report_text)
+    words = re.findall(r'\b[a-zA-ZáéíóúÁÉÍÓÚñÑ]{4,}\b', cleaned)
+    keywords = [w for w in words if w.istitle() and w not in
+                ["Para", "Como", "Este", "Esta", "Todo", "Sobre", "Desde", "Entre"]]
+    keywords = list(dict.fromkeys(keywords))[:10]
+    if len(keywords) < 3:
+        keywords = ["Metodología", "Resultados", "Análisis", "Sistema", "Desarrollo"]
+
     templates = [
         {
-            "text": "Respecto a la metodología aplicada en el informe sobre '{keyword1}', ¿cuál fue el enfoque principal?",
+            "text": "Según el trabajo, ¿cuál fue el principal enfoque metodológico utilizado en relación a '{keyword1}'?",
             "type": "multiple_choice",
             "options": [
                 "Un análisis cuantitativo riguroso basado en encuestas",
-                "Un marco de trabajo iterativo adaptado a los objetivos del proyecto",
-                "Una revisión bibliográfica descriptiva de la literatura actual",
-                "No se especifica una metodología clara en el documento"
+                "Un marco iterativo adaptado a los objetivos del proyecto",
+                "Una revisión bibliográfica descriptiva",
+                "No se especifica una metodología en el documento",
             ],
-            "correct_answer": "1"
+            "correct_answer": "1",
         },
         {
-            "text": "De acuerdo con la sección de resultados, ¿el uso de '{keyword2}' generó un impacto positivo significativo?",
+            "text": "El trabajo concluye que '{keyword2}' tiene un impacto positivo en los resultados obtenidos.",
             "type": "true_false",
             "options": ["Verdadero", "Falso"],
-            "correct_answer": "0"
+            "correct_answer": "0",
         },
         {
-            "text": "¿Cuál es la principal limitación del análisis de '{keyword3}' descrita en las conclusiones del informe?",
+            "text": "¿Cuál es la principal limitación descrita en las conclusiones respecto a '{keyword3}'?",
             "type": "multiple_choice",
             "options": [
-                "Falta de recursos de cómputo para procesar datos",
-                "El tamaño reducido de la muestra evaluada en el caso de estudio",
-                "Incompatibilidad técnica con los sistemas heredados de la institución",
-                "El sesgo en los datos de entrada recolectados inicialmente"
+                "Falta de recursos computacionales",
+                "Tamaño reducido de la muestra evaluada",
+                "Incompatibilidad técnica con sistemas heredados",
+                "Sesgo en los datos de entrada",
             ],
-            "correct_answer": "1"
+            "correct_answer": "1",
         },
         {
-            "text": "El informe sostiene que '{keyword1}' es fundamental para optimizar los procesos de la organización.",
+            "text": "'{keyword1}' es identificado en el trabajo como un factor fundamental para el éxito del proyecto.",
             "type": "true_false",
             "options": ["Verdadero", "Falso"],
-            "correct_answer": "0"
+            "correct_answer": "0",
         },
         {
-            "text": "¿Cuál de los siguientes autores o marcos de referencia es citado en el informe para justificar la importancia de '{keyword2}'?",
+            "text": "¿Qué marco de referencia o autor es citado para justificar el uso de '{keyword2}'?",
             "type": "multiple_choice",
             "options": [
-                "La norma ISO 9001 de gestión de la calidad",
-                "Estudios recientes de la Universidad Católica de Temuco",
-                "El manual de buenas prácticas del sector correspondiente",
-                "No se citan referencias externas en esta sección"
+                "La norma ISO 9001 de gestión de calidad",
+                "Estudios recientes de universidades nacionales",
+                "El manual de buenas prácticas del sector",
+                "No se citan referencias externas en esta sección",
             ],
-            "correct_answer": "2"
+            "correct_answer": "2",
         },
         {
-            "text": "¿Cuál fue el principal hallazgo en relación con '{keyword3}' durante las pruebas de simulación?",
+            "text": "¿Cuál fue el hallazgo principal relacionado con '{keyword3}' durante las pruebas del estudio?",
             "type": "multiple_choice",
             "options": [
                 "Un incremento del 15% en la eficiencia de respuesta",
-                "Una reducción notable en los costos de infraestructura",
-                "Una alta correlación entre las variables de desempeño medidas",
-                "El comportamiento fue errático y requiere mayor investigación"
+                "Una reducción notable en costos de infraestructura",
+                "Alta correlación entre las variables de desempeño",
+                "Comportamiento errático que requiere más investigación",
             ],
-            "correct_answer": "2"
-        }
+            "correct_answer": "2",
+        },
     ]
 
-    # Build questions
     questions = []
     for i in range(num_questions):
         tpl = templates[i % len(templates)]
         k1 = keywords[i % len(keywords)]
         k2 = keywords[(i + 1) % len(keywords)]
         k3 = keywords[(i + 2) % len(keywords)]
-        
         text = tpl["text"].format(keyword1=k1, keyword2=k2, keyword3=k3)
         questions.append({
             "text": text,
             "type": tpl["type"],
             "options": tpl["options"],
             "correct_answer": tpl["correct_answer"],
-            "limit_seconds": time_per_question
+            "limit_seconds": time_per_question,
         })
-        
     return questions

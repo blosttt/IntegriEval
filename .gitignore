@@ -14,7 +14,11 @@ ENV/
 # Databases
 backend/*.db
 backend/*.db-journal
+*.db
+*.db-journal
 uploads/
+backend/uploads/
+frontend/uploads/
 
 # NextJS
 frontend/node_modules/

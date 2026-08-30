@@ -1,135 +1,177 @@
 import datetime
 import random
 from sqlalchemy.orm import Session
-from app.models.models import EvaluationSession, Evaluation, Appointment, TeacherAvailability, Course, enrollments, User
+from app.models.models import (
+    FlashTestSession, Evaluation, Appointment, TeacherAvailability, Report, Student, User
+)
 from app.services.audit import log_event
+from app.services.email_service import send_appointment_email_sync
 
-def process_session_result(db: Session, session_id: int) -> EvaluationSession:
+
+def process_flash_test_result(db: Session, flash_session_id: int) -> FlashTestSession:
     """
-    Evaluates the final score of a session and triggers automatic scheduling
-    and random peer verification workflows.
+    Calculates the final score of a completed flash test session,
+    classifies the result, and triggers appointment scheduling when needed.
     """
-    session = db.query(EvaluationSession).filter(EvaluationSession.id == session_id).first()
+    session = db.query(FlashTestSession).filter(FlashTestSession.id == flash_session_id).first()
     if not session:
-        raise ValueError(f"Sesión de evaluación {session_id} no encontrada")
+        raise ValueError(f"FlashTestSession {flash_session_id} not found")
 
     evaluation = db.query(Evaluation).filter(Evaluation.id == session.evaluation_id).first()
-    course = db.query(Course).filter(Course.id == evaluation.course_id).first()
-    
-    # Calculate score percentage
-    total_questions = evaluation.num_questions
-    correct_answers = sum(1 for ans in session.answers if ans.is_correct)
-    
-    percentage = correct_answers / total_questions if total_questions > 0 else 0.0
-    session.score = float(correct_answers)
-    session.percentage_score = percentage
-    session.end_time = datetime.datetime.utcnow()
-    
-    # Classify result
-    if percentage < evaluation.pass_threshold:
+    report = db.query(Report).filter(Report.id == session.report_id).first()
+    student = db.query(Student).filter(Student.id == session.student_id).first()
+    course = evaluation.course
+
+    # Count correct answers
+    total_answered = len(session.answers)
+    correct = sum(1 for a in session.answers if a.is_correct)
+
+    # Total is based on questions actually sent (selected pool)
+    bank = report.question_bank if report else None
+    total_questions = len(bank.selected_question_ids) if (bank and bank.selected_question_ids) else total_answered
+    if total_questions == 0:
+        total_questions = evaluation.flash_questions_count
+
+    percentage = correct / total_questions if total_questions > 0 else 0.0
+
+    session.score = float(correct)
+    session.percentage_score = round(percentage, 4)
+    session.completed_at = datetime.datetime.utcnow()
+
+    # Classify
+    if percentage < evaluation.low_threshold:
         classification = "low"
-    elif percentage >= evaluation.excellence_threshold:
+    elif percentage >= evaluation.high_threshold:
         classification = "high"
     else:
         classification = "medium"
-        
+
     session.classification = classification
     session.status = "completed"
-    
+
+    # Mark report as flash completed
+    if report:
+        report.flash_completed = True
+        report.review_required = False
+        report.review_reason = None
+
     db.commit()
     db.refresh(session)
-    
-    # Log session completion in audit trail
+
+    # Log
     log_event(
         db,
-        user_id=session.student_id,
-        action="complete_eval",
-        entity="evaluation_session",
+        user_id=None,
+        action="complete_flash_test",
+        entity="flash_test_session",
         entity_id=str(session.id),
         details={
             "score": session.score,
             "percentage": percentage,
-            "classification": classification
-        }
+            "classification": classification,
+            "student_id": session.student_id,
+        },
     )
 
-    # Trigger actions based on classification
+    # ── Routing to office ─────────────────────────────────────────────────
+    reason = None
     if classification == "low":
-        # Low score: Schedule mandatory oral defense
-        schedule_appointment(
-            db,
-            evaluation_id=evaluation.id,
-            student_id=session.student_id,
-            teacher_id=course.teacher_id,
-            appt_type="defense",
-            reason="Resultado bajo el umbral de aprobación"
-        )
-        
+        reason = "low_flash"
     elif classification == "high":
-        # Excellent score: Schedule verification for this student
-        schedule_appointment(
+        reason = "high_flash"
+    else:
+        # Random selection
+        if random.random() < evaluation.random_review_pct:
+            reason = "random"
+
+    if reason and report:
+        report.review_required = True
+        report.review_reason = reason
+        db.commit()
+
+        appt = schedule_appointment(
             db,
             evaluation_id=evaluation.id,
             student_id=session.student_id,
             teacher_id=course.teacher_id,
-            appt_type="random_verification",
-            reason="Resultado de excelencia: confirmación de autenticidad"
+            appt_type=_appt_type_from_reason(reason),
+            reason=_reason_label(reason),
         )
-        
-        # Select random peer for verification (anti-fraud deterrence)
-        select_and_schedule_random_peer(
-            db,
-            evaluation=evaluation,
-            exclude_student_id=session.student_id,
-            teacher_id=course.teacher_id
-        )
-        
+
+        # Send appointment email
+        if student:
+            teacher = db.query(User).filter(User.id == course.teacher_id).first()
+            scheduled_str = appt.scheduled_time.strftime("%A %d de %B de %Y, %H:%M hrs")
+            send_appointment_email_sync(
+                student_email=student.email,
+                student_name=student.name,
+                eval_title=evaluation.title,
+                professor_name=teacher.name if teacher else "Profesor",
+                scheduled_time_str=scheduled_str,
+                appointment_type=appt.type,
+                notes=appt.notes or "",
+            )
+
     return session
+
+
+def _appt_type_from_reason(reason: str) -> str:
+    mapping = {
+        "low_flash": "defense",
+        "high_flash": "high_score_verification",
+        "random": "random_verification",
+        "ai_suspicion": "defense",
+    }
+    return mapping.get(reason, "defense")
+
+
+def _reason_label(reason: str) -> str:
+    labels = {
+        "low_flash": "Resultado bajo el umbral mínimo en el flash test",
+        "high_flash": "Resultado de excelencia — verificación de autenticidad",
+        "random": "Selección aleatoria como parte del proceso de verificación",
+        "ai_suspicion": "Indicadores elevados de contenido generado por IA",
+    }
+    return labels.get(reason, "Revisión requerida")
+
 
 def find_next_available_slot(db: Session, teacher_id: int) -> datetime.datetime:
     """
-    Finds the first free slot in the teacher's weekly availability starting from tomorrow.
-    If no availabilities are configured or all slots are taken in the next 14 days,
-    returns a fallback slot (3 days from now at 10:00 AM).
+    Finds the first free slot in the teacher's weekly availability starting tomorrow.
+    Falls back to 3 days from now at 10:00 AM if no slots configured.
     """
-    availabilities = db.query(TeacherAvailability).filter(TeacherAvailability.teacher_id == teacher_id).all()
-    
+    availabilities = db.query(TeacherAvailability).filter(
+        TeacherAvailability.teacher_id == teacher_id
+    ).all()
+
     if not availabilities:
-        # Fallback: 3 days from now at 10:00 AM
-        fallback_date = datetime.datetime.utcnow().date() + datetime.timedelta(days=3)
-        return datetime.datetime.combine(fallback_date, datetime.time(10, 0))
-        
-    # Scan the next 14 days starting tomorrow
+        fallback = datetime.datetime.utcnow().date() + datetime.timedelta(days=3)
+        return datetime.datetime.combine(fallback, datetime.time(10, 0))
+
     start_date = datetime.date.today() + datetime.timedelta(days=1)
-    
+
     for i in range(14):
         current_date = start_date + datetime.timedelta(days=i)
-        # SQLAlchemy stores day_of_week where 0=Monday (Python's weekday() is also 0=Monday)
         day_of_week = current_date.weekday()
-        
-        # Check if teacher has availability for this day of the week
         day_slots = [a for a in availabilities if a.day_of_week == day_of_week]
-        
+
         for slot in day_slots:
             try:
                 hour, minute = map(int, slot.start_time.split(":"))
-                candidate_time = datetime.datetime.combine(current_date, datetime.time(hour, minute))
-                
-                # Check if teacher already has a pending appointment at this exact time
+                candidate = datetime.datetime.combine(current_date, datetime.time(hour, minute))
                 existing = db.query(Appointment).filter(
                     Appointment.teacher_id == teacher_id,
-                    Appointment.scheduled_time == candidate_time,
-                    Appointment.status == "pending"
+                    Appointment.scheduled_time == candidate,
+                    Appointment.status == "pending",
                 ).first()
-                
                 if not existing:
-                    return candidate_time
+                    return candidate
             except Exception:
                 continue
-                
-    # If all slots are full, schedule 4 days from now at 11:00 AM
-    fallback_date = datetime.datetime.utcnow().date() + datetime.timedelta(days=4)
-    return datetime.datetime.combine(fallback_date, datetime.time(11, 0))
+
+    fallback = datetime.datetime.utcnow().date() + datetime.timedelta(days=4)
+    return datetime.datetime.combine(fallback, datetime.time(11, 0))
+
 
 def schedule_appointment(
     db: Session,
@@ -137,13 +179,11 @@ def schedule_appointment(
     student_id: int,
     teacher_id: int,
     appt_type: str,
-    reason: str
+    reason: str,
 ) -> Appointment:
-    """
-    Saves a new appointment in the database and logs the audit event.
-    """
+    """Creates and persists a new appointment. Returns the created appointment."""
     scheduled_time = find_next_available_slot(db, teacher_id)
-    
+
     appt = Appointment(
         evaluation_id=evaluation_id,
         student_id=student_id,
@@ -151,16 +191,15 @@ def schedule_appointment(
         type=appt_type,
         scheduled_time=scheduled_time,
         status="pending",
-        notes=f"Agendado automáticamente. Motivo: {reason}"
+        notes=f"Agendado automáticamente. Motivo: {reason}",
     )
     db.add(appt)
     db.commit()
     db.refresh(appt)
-    
-    # Audit log
+
     log_event(
         db,
-        user_id=None, # System action
+        user_id=None,
         action=f"auto_schedule_{appt_type}",
         entity="appointment",
         entity_id=str(appt.id),
@@ -168,58 +207,8 @@ def schedule_appointment(
             "student_id": student_id,
             "teacher_id": teacher_id,
             "evaluation_id": evaluation_id,
-            "scheduled_time": scheduled_time.isoformat()
-        }
+            "scheduled_time": scheduled_time.isoformat(),
+            "reason": reason,
+        },
     )
-    
     return appt
-
-def select_and_schedule_random_peer(
-    db: Session,
-    evaluation: Evaluation,
-    exclude_student_id: int,
-    teacher_id: int
-):
-    """
-    Selects a random student enrolled in the course (excluding the excel student
-    and any students already cited for this evaluation) and schedules a verification meeting.
-    """
-    # 1. Get all students enrolled in the course
-    enrolled_students = db.query(User).join(
-        enrollments, enrollments.c.student_id == User.id
-    ).filter(
-        enrollments.c.course_id == evaluation.course_id,
-        User.id != exclude_student_id
-    ).all()
-    
-    if not enrolled_students:
-        print("No peers available for random selection in this course.")
-        return
-        
-    # 2. Get students who already have appointments for this evaluation
-    already_scheduled_ids = [
-        a.student_id for a in db.query(Appointment.student_id).filter(
-            Appointment.evaluation_id == evaluation.id
-        ).all()
-    ]
-    
-    # 3. Filter candidates
-    candidates = [s for s in enrolled_students if s.id not in already_scheduled_ids]
-    
-    if not candidates:
-        # If all candidates already have meetings, we can't schedule another one
-        print("All peer students already have appointments scheduled for this evaluation.")
-        return
-        
-    # 4. Pick one randomly
-    chosen_peer = random.choice(candidates)
-    
-    # 5. Schedule appointment
-    schedule_appointment(
-        db,
-        evaluation_id=evaluation.id,
-        student_id=chosen_peer.id,
-        teacher_id=teacher_id,
-        appt_type="random_verification",
-        reason="Selección aleatoria disuasiva (compañero con rendimiento excepcional)"
-    )

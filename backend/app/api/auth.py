@@ -12,14 +12,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    """Register a teacher or admin account. Students do NOT have accounts."""
+    if user_in.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden registrar cuentas de tipo 'teacher' o 'admin'. "
+                   "Los estudiantes son gestionados por el profesor sin cuenta propia."
+        )
+
     db_user = db.query(User).filter(User.email == user_in.email).first()
     if db_user:
         raise HTTPException(
             status_code=400,
             detail="El correo electrónico ya se encuentra registrado"
         )
-    
-    # Verify institution if specified
+
     if user_in.institution_id:
         inst = db.query(Institution).filter(Institution.id == user_in.institution_id).first()
         if not inst:

@@ -5,7 +5,7 @@ import datetime
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_teacher, require_staff
-from app.models.models import Appointment, User, TeacherAvailability, EvaluationSession, Course
+from app.models.models import Appointment, User, TeacherAvailability, FlashTestSession, Course, Student
 from app.schemas.schemas import (
     AppointmentResponse, AppointmentFeedback, 
     TeacherAvailabilityCreate, TeacherAvailabilityResponse
@@ -63,58 +63,52 @@ def submit_appointment_feedback(
     appt.status = feedback.status
     appt.notes = feedback.notes
     
-    # If the teacher adjusted the score, locate the student's session and update it
+    # If the teacher adjusted the score, update the report's final score and appointment record
     if feedback.adjusted_score is not None:
-        session = db.query(EvaluationSession).filter(
-            EvaluationSession.evaluation_id == appt.evaluation_id,
-            EvaluationSession.student_id == appt.student_id
-        ).order_by(EvaluationSession.created_at.desc()).first()
+        appt.adjusted_score = feedback.adjusted_score
+
+        from app.models.models import Report
+        report = db.query(Report).filter(
+            Report.evaluation_id == appt.evaluation_id,
+            Report.student_id == appt.student_id
+        ).first()
         
-        if session:
-            old_score = session.score
-            # Ensure adjusted_score does not exceed total questions
-            total_questions = appt.evaluation.num_questions
-            session.score = float(feedback.adjusted_score)
-            session.percentage_score = float(feedback.adjusted_score) / total_questions if total_questions > 0 else 0.0
+        if report:
+            old_score = report.final_score_percentage
+            report.final_score_percentage = feedback.adjusted_score
             
-            # Recalculate classification based on adjusted score
-            if session.percentage_score < appt.evaluation.pass_threshold:
-                session.classification = "low"
-            elif session.percentage_score >= appt.evaluation.excellence_threshold:
-                session.classification = "high"
-            else:
-                session.classification = "medium"
-                
             log_event(
                 db,
                 user_id=current_user.id,
-                action="adjust_score",
-                entity="evaluation_session",
-                entity_id=str(session.id),
+                action="adjust_final_score",
+                entity="report",
+                entity_id=str(report.id),
                 details={
                     "old_score": old_score,
-                    "new_score": session.score,
-                    "notes": feedback.notes
+                    "new_score": feedback.adjusted_score,
+                    "notes": feedback.notes,
+                    "appointment_id": appt.id,
                 }
             )
             
     db.commit()
     db.refresh(appt)
     
-    # Audit log for meeting closure
     log_event(
         db,
         user_id=current_user.id,
-        action=f"complete_appointment",
+        action="complete_appointment",
         entity="appointment",
         entity_id=str(appt.id),
         details={"status": appt.status, "notes": appt.notes}
     )
     
-    response = AppointmentResponse.from_orm(appt)
-    response.student_name = appt.student.name
-    response.teacher_name = appt.teacher.name
-    response.evaluation_title = appt.evaluation.title
+    response = AppointmentResponse.model_validate(appt)
+    student = db.query(Student).filter(Student.id == appt.student_id).first()
+    response.student_name = student.name if student else None
+    response.student_email = student.email if student else None
+    response.teacher_name = appt.teacher.name if appt.teacher else None
+    response.evaluation_title = appt.evaluation.title if appt.evaluation else None
     return response
 
 @router.post("/{appt_id}/reschedule", response_model=AppointmentResponse)
