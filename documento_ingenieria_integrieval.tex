@@ -36,7 +36,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small \textcolor{gray}{\textbf{IntegriEval}} — Especificación de Ingeniería de Software}
-\fancyhead[R]{\small \textcolor{gray}{Versión 2.0.0}}
+\fancyhead[R]{\small \textcolor{gray}{Versión 2.1.0}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.4pt}
@@ -72,7 +72,7 @@
         \centering
         \vspace{0.2cm}
         \textbf{Asignatura / Proyecto:} Proyecto de Ingeniería de Software / Taller de Título\\
-        \textbf{Fecha:} Agosto 2026 \quad $\vert$ \quad \textbf{Versión:} 2.0.0\\
+        \textbf{Fecha:} Agosto 2026 \quad $\vert$ \quad \textbf{Versión:} 2.1.0 (Revisión de Objetivos)\\
         \textbf{Entorno:} Educación Superior / Cátedras Universitarias
         \vspace{0.2cm}
     \end{tcolorbox}
@@ -156,44 +156,61 @@ Validan la necesidad de trazabilidad auditable y defensas orales fundamentadas e
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Objetivos Específicos y Matriz de Trazabilidad (25\%)}
 
-\subsection{Objetivo General}
-Desarrollar e implementar \textbf{IntegriEval}, una plataforma web para la evaluación semi-automatizada de trabajos académicos que integre conversión de documentos a Markdown, análisis de pauta asistido por IA contextualizada con material de curso, generación de bancos de preguntas flash editables y un sistema de verificación oral focalizado con agendamiento automático según la disponibilidad del docente.
+\subsection{Objetivo General (Corregido y Refinado)}
 
-\subsection{Objetivos Específicos (Criterios SMART)}
-
-\begin{tcolorbox}[title=OE1: Módulo de Ingesta, Nómina y Conversión Estructurada]
-\textbf{Específico (S):} Construir el módulo de carga de nómina estudiantil vía CSV y subida masiva de trabajos (PDF/DOCX) con conversión a Markdown estructurado.\\
-\textbf{Medible (M):} Tasa de éxito de conversión $\ge 98\%$ en documentos estándar y soporte para lotes de hasta 100 archivos por operación.\\
-\textbf{Alcanzable (A):} Implementado con \texttt{pymupdf4llm} y parsing semántico en Python.\\
-\textbf{Relevante (R):} Elimina la fricción de cuentas para estudiantes y estructura el texto para el LLM.\\
-\textbf{Temporizado (T):} Completado y probado en la Fase 1 del proyecto.
+\begin{tcolorbox}[colback=primary!5!white,colframe=primary,title=Objetivo General del Proyecto]
+\large
+\textbf{Desarrollar una plataforma web para la evaluación semi-automatizada y verificación de autoría de trabajos académicos, combinando análisis de pautas asistido por inteligencia artificial contextualizada, generación interactiva de reactivos flash y agendamiento focalizado de defensas presenciales.}
 \end{tcolorbox}
 
-\begin{tcolorbox}[title=OE2: Motor de Análisis de Rúbrica y Detección Contextualizada]
-\textbf{Específico (S):} Desarrollar el servicio de IA que contraste el informe contra la pauta y los materiales del curso, entregando nota preliminar y desglose cualitativo.\\
-\textbf{Medible (M):} Tiempo de respuesta $\le 15$ segundos por informe en modo asíncrono.\\
-\textbf{Alcanzable (A):} Mediante arquitectura de workers en background en FastAPI con Claude 3.5 Sonnet y fallback Mock.\\
-\textbf{Relevante (R):} Aporta justificación cualitativa, evitando la arbitrariedad de detectores de caja negra.\\
-\textbf{Temporizado (T):} Finalizado en la Fase 2 del proyecto.
+\subsection{Objetivos Específicos (Criterios SMART Refinados)}
+
+\begin{tcolorbox}[title=OE1: Ingesta, Nómina y Normalización Documental]
+\textbf{Enunciado:} Implementar un módulo de ingesta masiva de trabajos académicos (PDF/DOCX) y gestión de nóminas estudiantiles sin cuentas de acceso, transformando los documentos a formato Markdown estructurado para su consumo optimizado por modelos de lenguaje.\\
+\textbf{Específico (S):} Ingesta de nómina por CSV (nombre/correo) y extracción semántica de PDFs a Markdown.\\
+\textbf{Medible (M):} Tasa de éxito de conversión $\ge 98\%$ en documentos estándar y procesamiento de lotes de hasta 100 archivos en una sola operación.\\
+\textbf{Alcanzable (A):} Implementado con \texttt{pymupdf4llm} y endpoints asíncronos en FastAPI.\\
+\textbf{Relevante (R):} Elimina la fricción de registro para estudiantes y estructura el texto para el LLM.\\
+\textbf{Temporizado (T):} Completado en el Sprint 1 (Fase de Ingesta).
 \end{tcolorbox}
 
-\begin{tcolorbox}[title=OE3: Generación, Edición y Despacho del Pool de Preguntas Flash]
-\textbf{Específico (S):} Crear un banco de preguntas dinámico (20–30 reactivos por informe) parametrizado por rigor (\textit{strict/medium/lax}), con edición docente y despacho por correo con token temporal seguro.\\
-\textbf{Medible (M):} 100\% de preguntas generadas a partir del informe específico del alumno; despacho mediante SMTP asíncrono con enlace de 1 solo uso (48h).\\
-\textbf{Alcanzable (A):} Utilizando \texttt{aiosmtplib} (Gmail SMTP gratuito sin costo) y tokens UUIDv4.\\
-\textbf{Relevante (R):} Concede el control pedagógico al docente antes de la examinación.\\
-\textbf{Temporizado (T):} Culminado en la Fase 3 del proyecto.
+\begin{tcolorbox}[title=OE2: Motor de Análisis Contextualizado y Detección de IA]
+\textbf{Enunciado:} Desarrollar un motor de análisis asistido por IA generativa que contraste los informes contra la pauta de corrección y el material bibliográfico de la asignatura, generando una calificación preliminar fundamentada y un índice de detección de texto sintético.\\
+\textbf{Específico (S):} Integración del material de apoyo del curso en el prompt para evaluación cualitativa.\\
+\textbf{Medible (M):} Tiempo de respuesta $\le 15$ segundos por informe en segundo plano, desglose JSON de rúbrica y calibración según 3 niveles de rigor (\textit{strict, medium, lax}).\\
+\textbf{Alcanzable (A):} Mediante workers asíncronos con Claude 3.5 Sonnet y motor de contingencia Mock.\\
+\textbf{Relevante (R):} Aporta justificación cualitativa y contextual, superando detectores de caja negra.\\
+\textbf{Temporizado (T):} Completado en el Sprint 2 (Fase de Análisis).
 \end{tcolorbox}
 
-\begin{tcolorbox}[title=OE4: Plataforma de Flash Test en Tiempo Real y Ruteo Inteligente]
-\textbf{Específico (S):} Diseñar la interfaz de examinación en tiempo real por WebSocket y el algoritmo de ruteo que agenda citas presenciales a casos que cumplan criterios de revisión.\\
-\textbf{Medible (M):} Latencia de WebSocket $\le 100\text{ms}$, temporización estricta por reactivo y agendamiento del 100\% de estudiantes con flash score $< 50\%$, $\ge 95\%$ o 10\% aleatorio.\\
-\textbf{Alcanzable (A):} Desarrollado con WebSockets sobre FastAPI y Next.js App Router con Tailwind CSS.\\
-\textbf{Relevante (R):} Focaliza las horas presenciales del profesor exclusivamente en defensas justificadas.\\
-\textbf{Temporizado (T):} Verificado en la Fase 4 del proyecto.
+\begin{tcolorbox}[title=OE3: Generación Dinámica y Supervisión Humana de Reactivos Flash]
+\textbf{Enunciado:} Diseñar un sistema interactivo de gestión de bancos de preguntas personalizadas por estudiante, que permita al docente revisar, editar, añadir reactivos propios y despachar pruebas flash mediante enlaces seguros de un solo uso vía correo electrónico.\\
+\textbf{Específico (S):} Pool de 20 preguntas derivadas del informe, selector aleatorio y despacho SMTP.\\
+\textbf{Medible (M):} 100\% de preguntas asociadas al informe; despacho de enlaces UUIDv4 con vigencia de 48h a través de Gmail SMTP gratuito (\texttt{aiosmtplib}).\\
+\textbf{Alcanzable (A):} Panel interactivo en Next.js y servicio de correo asíncrono en Python.\\
+\textbf{Relevante (R):} Asegura el paradigma \textit{Human-in-the-Loop} antes de enviar las evaluaciones.\\
+\textbf{Temporizado (T):} Completado en el Sprint 3 (Fase de Reactivos y Despacho).
 \end{tcolorbox}
 
-\subsection{Matriz de Trazabilidad}
+\begin{tcolorbox}[title=OE4: Evaluación en Tiempo Real y Ruteo Automatizado de Citas]
+\textbf{Enunciado:} Construir una interfaz de examinación en tiempo real para estudiantes y un algoritmo de ruteo que asigne citas de defensa presencial en los bloques libres del docente exclusivamente para estudiantes con rendimientos atípicos o asignación aleatoria.\\
+\textbf{Específico (S):} Flash test vía WebSocket cronometrado y agendamiento automático según disponibilidad.\\
+\textbf{Medible (M):} Latencia WebSocket $\le 100\text{ms}$, temporizador estricto por reactivo y agendamiento del 100\% de estudiantes con score flash $< 50\%$, $\ge 95\%$ o 10\% aleatorio de control.\\
+\textbf{Alcanzable (A):} WebSockets sobre Starlette/FastAPI y frontend reactivo con Tailwind CSS.\\
+\textbf{Relevante (R):} Focaliza el tiempo presencial del docente únicamente en defensas necesarias.\\
+\textbf{Temporizado (T):} Completado en el Sprint 4 (Fase de Examinación y Citas).
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=OE5: Validación Integral, Auditoría y Cierre de Calificaciones]
+\textbf{Enunciado:} Validar la solución técnica mediante pruebas de integración, paneles de auditoría inmutable de acciones docentes y mecanismos de ajuste manual definitivo de notas.\\
+\textbf{Específico (S):} Trazabilidad de cambios de notas, registro de acuerdos presenciales y audit logs.\\
+\textbf{Medible (M):} 100\% de eventos críticos auditados con timestamp/usuario y tiempo de respuesta de API $\le 200\text{ms}$ en condiciones normales de uso.\\
+\textbf{Alcanzable (A):} Módulo de auditoría estructurado en SQLAlchemy y panel administrativo de métricas.\\
+\textbf{Relevante (R):} Garantiza la transparencia legal y ética ante apelaciones estudiantiles.\\
+\textbf{Temporizado (T):} Completado en el Sprint 5 (Fase de Verificación y Cierre).
+\end{tcolorbox}
+
+\subsection{Matriz de Trazabilidad Actualizada}
 
 \begin{table}[h!]
 \centering
@@ -210,7 +227,7 @@ Fricción de adopción tecnológica & Alumnos se resisten a crear cuentas y reco
 \addlinespace
 Evaluación no interdisciplinaria & La IA evalúa de forma aislada sin conocer la materia del curso. & \textbf{OE2} & Módulo de Materiales que inyecta guías y syllabus como contexto en el LLM. \\
 \addlinespace
-Pérdida de control del docente & Sistemas 100\% automáticos sin intervención humana (\textit{Human-in-the-loop}). & \textbf{OE3, OE4} & Editor interactivo de preguntas y panel para registrar acuerdos presenciales con ajuste de nota. \\
+Pérdida de control del docente & Sistemas 100\% automáticos sin intervención humana (\textit{Human-in-the-loop}). & \textbf{OE3, OE4, OE5} & Editor interactivo de preguntas y panel para registrar acuerdos presenciales con ajuste de nota. \\
 \addlinespace
 Presupuesto cero en MVPs & Costos prohibitivos de APIs transaccionales y servidores de pago. & \textbf{OE3} & Despacho con Gmail SMTP gratuito (\texttt{aiosmtplib}) y arquitectura SQLite/FastAPI. \\
 \bottomrule

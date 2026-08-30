@@ -3,13 +3,13 @@
 **Proyecto:** IntegriEval — Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash  
 **Autores:** Equipo de Desarrollo Estudiantil  
 **Fecha:** Agosto 2026  
-**Versión:** 2.0.0  
+**Versión:** 2.1.0  
 
 ---
 
 ## 1. Definición Clara del Problema (10%)
 
-### 1.1 Contexto
+### 1.1 Contexto y Antecedentes
 La adopción masiva y acelerada de Modelos de Lenguaje Grande (LLMs, por sus siglas en inglés), como Claude, GPT-4 y Gemini, ha transformado drásticamente la educación superior. Si bien estas herramientas ofrecen capacidades analíticas y creativas sin precedentes, han desencadenado una crisis en los métodos tradicionales de evaluación académica basados en informes, ensayos y tareas domiciliarias escritas.
 
 Actualmente, las universidades utilizan plataformas de gestión de aprendizaje (LMS como Moodle, Canvas o Blackboard) donde los estudiantes entregan sus trabajos en formatos digitales (PDF o DOCX). Los docentes y ayudantes se enfrentan al reto de evaluar cientos de páginas escritas sin contar con mecanismos fiables para discernir entre el aprendizaje genuino del estudiante y la generación íntegra o no atribuida de texto mediante IA.
@@ -54,82 +54,104 @@ El problema central se articula en torno a tres factores críticos:
 
 ## 2. Definición de Objetivos SMART y Matriz de Trazabilidad (25%)
 
-### 2.1 Objetivo General
-Desarrollar e implementar **IntegriEval**, una plataforma web orientada al docente para la evaluación semi-automatizada de trabajos académicos que integre conversión de documentos a Markdown, análisis de cumplimiento de pauta asistido por IA contextualizada con material de curso, generación de bancos de preguntas flash editables y un sistema de verificación oral focalizado con agendamiento automático en base a la disponibilidad del profesor.
+### 2.1 Objetivo General (Corregido y Refinado)
+
+> **Desarrollar una plataforma web para la evaluación semi-automatizada y verificación de autoría de trabajos académicos, combinando análisis de pautas asistido por inteligencia artificial contextualizada, generación interactiva de reactivos flash y agendamiento focalizado de defensas presenciales.**
 
 ---
 
-### 2.2 Objetivos Específicos (Criterios SMART)
+### 2.2 Objetivos Específicos (Criterios SMART Corregidos)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ OBJETIVO ESPECÍFICO 1 (OE1): Módulo de Ingesta, Nómina y Conversión Estructurada                                │
+│ OBJETIVO ESPECÍFICO 1 (OE1): Ingesta, Nómina y Normalización Documental                                         │
 ├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
-│ Específico (S)          │ Desarrollar el módulo de carga de estudiantes (CSV) y subida masiva de trabajos       │
-│                         │ académicos (PDF/DOCX) con conversión automatizada a formato Markdown estructurado.     │
-│ Medible (M)             │ Tasa de éxito de conversión >= 98% en documentos estándar y soporte para lotes de     │
+│ Enunciado               │ Implementar un módulo de ingesta masiva de trabajos académicos (PDF/DOCX) y gestión  │
+│                         │ de nóminas estudiantiles sin cuentas de acceso, transformando los documentos a formato│
+│                         │ Markdown estructurado para su consumo optimizado por modelos de lenguaje.             │
+│ Específico (S)          │ Ingesta de nómina por CSV (nombre/correo) y extracción semántica de PDFs a Markdown.  │
+│ Medible (M)             │ Tasa de éxito de conversión >= 98% en documentos estándar y procesamiento de lotes de │
 │                         │ hasta 100 archivos en una sola operación.                                             │
-│ Alcanzable (A)          │ Utilizando la librería de alto rendimiento `pymupdf4llm` y parsing semántico en Python│
-│ Relevante (R)           │ Elimina la necesidad de cuentas de estudiantes y estructura el texto para el LLM.     │
-│ Temporizado (T)         │ Implementado y validado en la Fase 1 del ciclo de desarrollo.                          │
+│ Alcanzable (A)          │ Implementado con `pymupdf4llm` y endpoints asíncronos en FastAPI.                     │
+│ Relevante (R)           │ Elimina la fricción de registro para estudiantes y estructura el texto para el LLM.  │
+│ Temporizado (T)         │ Completado en el Sprint 1 (Fase de Ingesta).                                          │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ OBJETIVO ESPECÍFICO 2 (OE2): Motor de Análisis de Rúbrica y Detección Asistida por Contexto                     │
+│ OBJETIVO ESPECÍFICO 2 (OE2): Motor de Análisis Contextualizado y Detección de IA                                │
 ├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
-│ Específico (S)          │ Implementar un servicio de IA que contraste el informe del alumno contra la pauta del  │
-│                         │ docente y los PDFs de material de la materia, generando una nota preliminar y feedback│
-│ Medible (M)             │ Tiempo de procesamiento <= 15 segundos por informe en modo asíncrono y generación     │
-│                         │ de desglose porcentual por criterio de rúbrica.                                       │
-│ Alcanzable (A)          │ Mediante arquitectura de workers en background (FastAPI) y llamadas a Claude 3.5 Sonnet│
-│                         │ con fallback resiliente a Mock Engine para desarrollo offline.                        │
-│ Relevante (R)           │ Aporta justificación cualitativa y contextual, evitando la arbitrariedad de detectores│
-│ Temporizado (T)         │ Completado y probado en la Fase 2 del proyecto.                                       │
+│ Enunciado               │ Desarrollar un motor de análisis asistido por IA generativa que contraste los informes│
+│                         │ contra la pauta de corrección y el material bibliográfico de la asignatura, generando │
+│                         │ una calificación preliminar fundamentada y un índice de detección de texto sintético. │
+│ Específico (S)          │ Integración del material de apoyo del curso en el prompt para evaluación cualitativa. │
+│ Medible (M)             │ Tiempo de respuesta <= 15 segundos por informe en segundo plano, desglose JSON de     │
+│                         │ rúbrica y calibración según 3 niveles de rigor (strict, medium, lax).                 │
+│ Alcanzable (A)          │ Mediante workers asíncronos con Claude 3.5 Sonnet y motor de contingencia Mock.       │
+│ Relevante (R)           │ Aporta justificación cualitativa y contextual, superando detectores de caja negra.    │
+│ Temporizado (T)         │ Completado en el Sprint 2 (Fase de Análisis).                                         │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ OBJETIVO ESPECÍFICO 3 (OE3): Generación, Edición y Despacho del Pool de Preguntas Flash                         │
+│ OBJETIVO ESPECÍFICO 3 (OE3): Generación Dinámica y Supervisión Humana de Reactivos Flash                        │
 ├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
-│ Específico (S)          │ Crear un banco de preguntas dinámico (20-30 reactivos por informe) parametrizado por   │
-│                         │ rigor (estricto/medio/laxo), con interfaz de edición para el docente y despacho por   │
-│                         │ correo electrónico mediante token temporal seguro.                                    │
-│ Medible (M)             │ 100% de preguntas asociadas al contenido específico del estudiante, despacho vía SMTP │
-│                         │ asíncrono con enlace de 1 solo uso con caducidad configurable (ej. 48h).              │
-│ Alcanzable (A)          │ Empleando `aiosmtplib` (Gmail SMTP gratuito sin costo operativo) y tokens UUIDv4.      │
-│ Relevante (R)           │ Transfiere el control pedagógico al docente, quien puede adaptar o aprobar el test.   │
-│ Temporizado (T)         │ Finalizado en la Fase 3 del proyecto.                                                 │
+│ Enunciado               │ Diseñar un sistema interactivo de gestión de bancos de preguntas personalizadas por   │
+│                         │ estudiante, que permita al docente revisar, editar, añadir reactivos propios y        │
+│                         │ despachar pruebas flash mediante enlaces seguros de un solo uso vía correo electrónico│
+│ Específico (S)          │ Pool de 20 preguntas derivadas del informe, selector aleatorio y despacho SMTP.       │
+│ Medible (M)             │ 100% de preguntas asociadas al informe; despacho de enlaces UUIDv4 con vigencia de 48h│
+│                         │ a través de Gmail SMTP gratuito (`aiosmtplib`).                                       │
+│ Alcanzable (A)          │ Panel interactivo en Next.js y servicio de correo asíncrono en Python.                │
+│ Relevante (R)           │ Asegura el paradigma Human-in-the-Loop antes de enviar las evaluaciones.              │
+│ Temporizado (T)         │ Completado en el Sprint 3 (Fase de Reactivos y Despacho).                              │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ OBJETIVO ESPECÍFICO 4 (OE4): Plataforma de Flash Test en Tiempo Real y Ruteo Inteligente                        │
+│ OBJETIVO ESPECÍFICO 4 (OE4): Evaluación en Tiempo Real y Ruteo Automatizado de Citas                            │
 ├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
-│ Específico (S)          │ Diseñar la interfaz de examinación en tiempo real para el estudiante (sin login) y el  │
-│                         │ algoritmo de ruteo que clasifica resultados y agenda citas de oficina automáticamente.│
-│ Medible (M)             │ Latencia de WebSocket <= 100ms, temporización estricta por reactivo (anti-trampas), y │
-│                         │ agendamiento automático del 100% de estudiantes que cumplan criterios de revisión.    │
-│ Alcanzable (A)          │ Usando WebSockets sobre FastAPI y frontend reactivo en Next.js App Router con Tailwind.│
+│ Enunciado               │ Construir una interfaz de examinación en tiempo real para estudiantes y un algoritmo de│
+│                         │ ruteo que asigne citas de defensa presencial en los bloques libres del docente        │
+│                         │ exclusivamente para estudiantes con rendimientos atípicos o asignación aleatoria.     │
+│ Específico (S)          │ Flash test vía WebSocket cronometrado y agendamiento automático según disponibilidad. │
+│ Medible (M)             │ Latencia WebSocket <= 100ms, temporizador estricto por reactivo y agendamiento del    │
+│                         │ 100% de estudiantes con score flash < 50%, >= 95% o 10% aleatorio de control.         │
+│ Alcanzable (A)          │ WebSockets sobre Starlette/FastAPI y frontend reactivo con Tailwind CSS.              │
 │ Relevante (R)           │ Focaliza el tiempo presencial del docente únicamente en defensas necesarias.          │
-│ Temporizado (T)         │ Integrado y verificado en la Fase 4 del proyecto.                                     │
+│ Temporizado (T)         │ Completado en el Sprint 4 (Fase de Examinación y Citas).                              │
+└─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ OBJETIVO ESPECÍFICO 5 (OE5): Validación Integral, Auditoría y Cierre de Calificaciones                          │
+├─────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────┤
+│ Enunciado               │ Validar la solución técnica mediante pruebas de integración, paneles de auditoría     │
+│                         │ inmutable de acciones docentes y mecanismos de ajuste manual definitivo de notas.     │
+│ Específico (S)          │ Trazabilidad de cambios de notas, registro de acuerdos presenciales y audit logs.    │
+│ Medible (M)             │ 100% de eventos críticos auditados con timestamp/usuario y tiempo de respuesta de API │
+│                         │ <= 200ms en condiciones normales de uso.                                             │
+│ Alcanzable (A)          │ Módulo de auditoría estructurado en SQLAlchemy y panel administrativo de métricas.    │
+│ Relevante (R)           │ Garantiza la transparencia legal y ética ante apelaciones estudiantiles.              │
+│ Temporizado (T)         │ Completado en el Sprint 5 (Fase de Verificación y Cierre).                            │
 └─────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 2.3 Matriz de Trazabilidad (Problema vs. Objetivos)
+### 2.3 Matriz de Trazabilidad Actualizada (Problema vs. Objetivos)
 
 | Dimensión del Problema | Causa Raíz Identificada | Objetivo SMART Vinculado | Resultado Entregable Esperado |
 |---|---|---|---|
 | **Falsos positivos de detectores IA tradicionales** | Dependencia exclusiva de métricas de perplejidad estadística sin validación de comprensión humana. | **OE2 & OE3** | Evaluación contextualizada con material de curso y generación de preguntas de autoría exclusivas del informe. |
-| **Imposibilidad de interrogar al 100% de los estudiantes** | Restricción temporal y sobrecarga de horas de atención del docente en cátedras numerosas. | **OE4** | Ruteo automático: solo rinden defensa oral aquellos con flash score < 50%, >= 95% o el 10% aleatorio de control. |
+| **Imposibilidad de interrogar al 100% de los estudiantes** | Restricción temporal y sobrecarga de horas de atención del docente en cátedras numerosas. | **OE4** | Ruteo automático: solo rinden defensa oral aquellos con flash score $< 50\%$, $\ge 95\%$ o el $10\%$ aleatorio de control. |
 | **Fricción operativa en adopción de software** | Resistencia de alumnos a crear nuevas cuentas y recordar credenciales para un único examen. | **OE1 & OE3** | Acceso sin cuenta: el docente carga nómina CSV y el alumno ingresa directamente mediante enlace tokenizado por correo. |
 | **Evaluaciones genéricas no interdisciplinarias** | Los modelos de IA evalúan de forma aislada sin conocer los contenidos impartidos en clase. | **OE2** | Módulo de *Materiales de Curso* que inyecta el syllabus y guías docentes en el prompt del evaluador. |
-| **Falta de control del docente sobre la IA** | Sistemas de evaluación 100% automáticos que no permiten supervisión humana (*Human-in-the-loop*). | **OE3 & OE4** | Interfaz interactiva de edición del pool de preguntas y panel para registrar acuerdos de reunión presencial con ajuste de nota. |
+| **Falta de control del docente sobre la IA** | Sistemas de evaluación 100% automáticos que no permiten supervisión humana (*Human-in-the-loop*). | **OE3, OE4 & OE5** | Interfaz interactiva de edición del pool de preguntas y panel para registrar acuerdos de reunión presencial con ajuste de nota. |
 | **Presupuesto cero / Entorno estudiantil** | Costos elevados de APIs de correo transaccional (SendGrid, Mailgun) e infraestructuras de pago. | **OE3** | Utilización de Gmail SMTP gratuito (`aiosmtplib`) y arquitectura modular SQLite/FastAPI/Next.js de bajo consumo. |
 
 ---
@@ -137,24 +159,6 @@ Desarrollar e implementar **IntegriEval**, una plataforma web orientada al docen
 ## 3. Análisis Exhaustivo y Justificado de Requerimientos (45%)
 
 ### 3.1 Fundamentación Teórica y Estado del Arte
-
-```
-                               ┌───────────────────────────────────────────────────────────┐
-                               │             MARCO TEÓRICO DE INTEGRIEVAL                  │
-                               └─────────────────────────────┬─────────────────────────────┘
-                                                             │
-            ┌────────────────────────────────────────────────┼──────────────────────────────────────────────┐
-            │                                                │                                              │
-            ▼                                                ▼                                              ▼
-┌───────────────────────┐                        ┌───────────────────────┐                      ┌───────────────────────┐
-│ Evaluación Auténtica  │                        │ Detección Contextual  │                      │ Human-in-the-Loop     │
-│ (Wiggins, 1998)       │                        │ vs 'Black-Box'        │                      │ (HITL) en IA EdTech   │
-│ Demostración activa   │                        │ Integración de pauta  │                      │ El docente mantiene la│
-│ y defensa oral del    │                        │ y bibliografía del    │                      │ decisión y ajuste     │
-│ conocimiento.         │                        │ curso en el prompt.   │                      │ final de notas.       │
-└───────────────────────┘                        └───────────────────────┘                      └───────────────────────┘
-```
-
 1. **Teoría de la Evaluación Auténtica (Grant Wiggins):**
    La evaluación auténtica sostiene que el aprendizaje real se evidencia cuando el estudiante es capaz de articular, defender y aplicar sus conocimientos en situaciones directas de interrogación. IntegriEval traslada el foco desde *"¿el texto fue escrito por una IA?"* hacia *"¿el estudiante domina y puede responder sobre lo que está escrito en su documento?"*.
 2. **Limitaciones Documentadas de los Detectores de IA (Sadasivan et al., 2023; Weber-Wulff et al., 2023):**
@@ -214,26 +218,10 @@ Desarrollar e implementar **IntegriEval**, una plataforma web orientada al docen
 
 ### 3.4 Evaluación Crítica de Alternativas Técnicas y Justificación
 
-```mermaid
-graph TD
-    subgraph "Alternativa 1: Autenticación de Estudiantes"
-        A1["Cuentas Completas (Login + Password)"] -.->|Rechazada: Fricción de registro y soporte de claves| R1["Descartada"]
-        A2["Acceso por Token Único vía Correo"] -->|Aprobada: Cero fricción, acceso instantáneo| S1["Seleccionada"]
-    end
-    subgraph "Alternativa 2: Detección de Integridad"
-        B1["Detectores Estadísticos de Caja Negra"] -.->|Rechazada: Alto índice de falsos positivos| R2["Descartada"]
-        B2["Conversión Markdown + Análisis Contextual + Flash Test"] -->|Aprobada: Verificación activa y justa| S2["Seleccionada"]
-    end
-    subgraph "Alternativa 3: Infraestructura de Correo"
-        C1["SaaS Transaccional de Pago (SendGrid)"] -.->|Rechazada: Inviable para MVP sin presupuesto| R3["Descartada"]
-        C2["Gmail SMTP Asíncrono (aiosmtplib)"] -->|Aprobada: Gratuito, robusto y sin costos| S3["Seleccionada"]
-    end
-```
-
 | Componente de Decisión | Alternativas Consideradas | Opción Seleccionada | Justificación Técnica y Práctica |
 |---|---|---|---|
 | **Modelo de Acceso para Estudiantes** | 1. Registro obligatorio con cuenta y password.<br>2. Integración OAuth con Google/Microsoft institucional.<br>3. Enlace con token de un solo uso despachado al correo. | **Opción 3: Token por Correo** | Reduce a cero la fricción del usuario. El profesor no requiere soporte de recuperación de contraseñas de alumnos. El enlace tokenizado actúa como factor de posesión del correo institucional. |
-| **Estrategia de Verificación de Integridad** | 1. Detectores de IA comerciales (Turnitin, Copyleaks).<br>2. Bloqueo de navegación / Proctored Browser.<br>3. Flash Test oral/escrito personalizado con IA. | **Opción 3: Flash Test Contextualizado** | Evita la controversia ética de los falsos positivos. Evalúa el conocimiento real del autor interrogándolo sobre su propio texto y metodología en tiempo real. |
+| **Estrategia de Verificación de Integridad** | 1. Detectores de IA comerciales (Turnitin, Copyleaks).<br>2. Bloqueo de navegación / Proctored Browser.<br>3. Flash Test oral/escrito personalizado con IA. | **Opción 3: Flash Test Contextual** | Evita la controversia ética de los falsos positivos. Evalúa el conocimiento real del autor interrogándolo sobre su propio texto y metodología en tiempo real. |
 | **Conversión de Documentos** | 1. Extracción de texto plano (pypdf/pdfplumber).<br>2. OCR tradicional (Tesseract).<br>3. Conversión semántica a Markdown (`pymupdf4llm`). | **Opción 3: `pymupdf4llm`** | Preserva la jerarquía de títulos, tablas comparativas y fragmentos de código, permitiendo que el LLM comprenda la estructura lógica del informe con un 40% menos de ruido léxico. |
 | **Servicio de Envío de Correos** | 1. Servicios SaaS de pago (SendGrid, Mailgun, Resend).<br>2. Servidor SMTP propio (Postfix en VPS).<br>3. SMTP de Gmail vía `aiosmtplib`. | **Opción 3: Gmail SMTP Asíncrono** | Al tratarse de un MVP universitario con presupuesto cero, una contraseña de aplicación de Google permite enviar hasta 500 correos diarios sin costo alguno y sin dependencias externas complejas. |
 | **Arquitectura de Base de Datos** | 1. PostgreSQL en clúster gestionado.<br>2. MongoDB NoSQL.<br>3. SQLite embebido con SQLAlchemy 2.0. | **Opción 3: SQLite + SQLAlchemy** | Portabilidad absoluta para el MVP, cero configuración de servidores externos, soporte de transacciones ACID y migración trivial a PostgreSQL mediante SQLAlchemy en fases posteriores. |
@@ -242,232 +230,7 @@ graph TD
 
 ## 4. Planificación del Proyecto y Product Backlog Refinado (20%)
 
-### 4.1 Estructura de Épicas y Alineación Estratégica
-
-```
-╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                   ESTRUCTURA DE ÉPICAS DEL BACKLOG                                   ║
-╠══════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                                      ║
-║  [ÉPICA 1] Gestión Académica y Nómina Sin Cuentas (Alineada con OE1)                                 ║
-║  [ÉPICA 2] Ingesta Masiva, Conversión a Markdown y Base de Conocimiento (Alineada con OE1 y OE2)    ║
-║  [ÉPICA 3] Motor de Evaluación Contextual y Detección con IA (Alineada con OE2)                      ║
-║  [ÉPICA 4] Gestión Interactiva del Pool de Preguntas Flash (Alineada con OE3)                        ║
-║  [ÉPICA 5] Motor de Despacho de Correo y Flash Test en Tiempo Real (Alineada con OE3 y OE4)          ║
-║  [ÉPICA 6] Agenda Automatizada de Defensas y Ajuste de Calificaciones (Alineada con OE4)             ║
-║                                                                                                      ║
-╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
-```
-
----
-
-### 4.2 Product Backlog Detallado y Priorizado (MoSCoW / Story Points)
-
-*Estimación en Story Points (SP) según escala Fibonacci (1, 2, 3, 5, 8, 13).*
-
-#### 🟢 ÉPICA 1: Gestión Académica y Nómina Sin Cuentas (Alineada con OE1)
-
-##### US-01: Creación y Configuración de Asignaturas
-- **Como:** Docente universitario.  
-- **Quiero:** Crear mis cursos indicando nombre y periodo lectivo.  
-- **Para:** Organizar las evaluaciones de mis asignaturas en un espacio de trabajo aislado.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 3 SP  
-- **Criterios de Aceptación (Gherkin):**
-  ```gherkin
-  Escenario: Creación exitosa de curso
-    Dado que he iniciado sesión como docente
-    Cuando ingreso el nombre "Inteligencia Artificial" y periodo "2026-1"
-    Y presiono "Crear Asignatura"
-    Entonces el curso aparece en mi lista lateral y queda seleccionado activamente.
-  ```
-- **Tareas Técnicas:**
-  - `T-01.1`: Crear modelo `Course` en SQLAlchemy y endpoint `POST /api/courses/`.
-  - `T-01.2`: Diseñar formulario reactivo en `teacher/dashboard/page.tsx` con feedback de éxito.
-
-##### US-02: Importación de Estudiantes vía CSV
-- **Como:** Docente o ayudante de cátedra.  
-- **Quiero:** Subir un archivo CSV con la lista de mis alumnos (nombre y correo).  
-- **Para:** Registrar a toda la sección en segundos sin que ellos deban crear una cuenta.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 5 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Carga masiva con encabezado y caracteres especiales
-    Dado un archivo CSV con formato "Nombre,Correo" exportado desde Excel con codificación UTF-8 BOM
-    Cuando el docente lo sube en la pestaña "2. Estudiantes"
-    Entonces el backend procesa las filas, descarta duplicados en el curso e informa el total de alumnos creados.
-  ```
-- **Tareas Técnicas:**
-  - `T-02.1`: Implementar parser robusto en `api/students.py` con manejo de BOM (`utf-8-sig`) y validación de regex de emails.
-  - `T-02.2`: Diseñar vista de tabla en frontend con botón de eliminación individual y contadores.
-
----
-
-#### 🟢 ÉPICA 2: Ingesta Masiva, Conversión a Markdown y Materiales (Alineada con OE1 y OE2)
-
-##### US-03: Carga de Materiales de Referencia del Curso
-- **Como:** Profesor titular.  
-- **Quiero:** Subir las guías de estudio, syllabus y pautas de la materia en PDF o Word.  
-- **Para:** Que la IA disponga del contexto curricular exacto al momento de evaluar los informes.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 5 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Conversión de syllabus a Markdown
-    Dado un PDF de 5MB con la pauta de la asignatura
-    Cuando el profesor lo sube en "4. Materiales de Apoyo"
-    Entonces el sistema ejecuta extract_to_markdown(), almacena el archivo y guarda el texto Markdown en BD.
-  ```
-- **Tareas Técnicas:**
-  - `T-03.1`: Crear modelo `CourseMaterial` y endpoint `POST /api/evaluations/{id}/materials`.
-  - `T-03.2`: Integrar servicio `extractor.py` para conversión a Markdown.
-
-##### US-04: Subida en Lote de Informes de Alumnos y Mapeo
-- **Como:** Docente o ayudante.  
-- **Quiero:** Seleccionar todos los PDFs de informes descargados del LMS universitario en un solo paso.  
-- **Para:** No tener que subir los trabajos uno por uno.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 8 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Asociación heurística y encolamiento
-    Dado un lote de 40 archivos PDF
-    Cuando el docente los selecciona en "5. Trabajos"
-    Entonces la interfaz sugiere automáticamente el estudiante por coincidencia de nombre/email y permite corregir mapeos antes de iniciar el análisis en segundo plano.
-  ```
-- **Tareas Técnicas:**
-  - `T-04.1`: Implementar endpoint `POST /api/reports/bulk-upload` que reciba `multipart/form-data` y despache `BackgroundTasks`.
-  - `T-04.2`: Crear componente de asignación visual en Next.js con autocompletado.
-
----
-
-#### 🟢 ÉPICA 3: Motor de Evaluación Contextual con IA (Alineada con OE2)
-
-##### US-05: Análisis Automatizado de Pauta y Detección de IA
-- **Como:** Profesor evaluador.  
-- **Quiero:** Que la IA analice cada informe en base a la pauta y los materiales subidos.  
-- **Para:** Obtener una nota preliminar justificada, desglose por criterios y alerta de posible uso de IA.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 8 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Procesamiento asíncrono con feedback estructurado
-    Dado un informe en estado "processing"
-    Cuando la IA completa el análisis con Claude 3.5 Sonnet
-    Entonces el reporte pasa a "done", guardando score_percentage, ai_detected_percentage y feedback en JSON.
-  ```
-- **Tareas Técnicas:**
-  - `T-05.1`: Diseñar prompt estructurado en `ai_service.py` con inyección de material de curso y formato JSON estricto.
-  - `T-05.2`: Implementar fallback resiliente a `analyze_report_mock()` en caso de ausencia de API Key.
-
-##### US-06: Vista Previa de Markdown y Ajuste de Calificación
-- **Como:** Docente.  
-- **Quiero:** Leer el informe limpio convertido a Markdown y poder modificar la nota de la IA.  
-- **Para:** Mantener el control pedagógico total sobre las calificaciones de mis alumnos.  
-- **Prioridad:** *SHOULD HAVE* | **Estimación:** 3 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Ajuste manual de nota
-    Dado un informe con nota preliminar IA del 60%
-    Cuando el docente ingresa "0.75" y presiona "Guardar"
-    Entonces final_score_percentage se actualiza a 0.75 y se genera un registro en el log de auditoría.
-  ```
-- **Tareas Técnicas:**
-  - `T-06.1`: Endpoint `PATCH /api/reports/{id}/score` y `GET /api/reports/{id}/markdown`.
-  - `T-06.2`: Modal de lectura de código Markdown en frontend.
-
----
-
-#### 🟢 ÉPICA 4: Gestión Interactiva del Pool de Preguntas Flash (Alineada con OE3)
-
-##### US-07: Editor y Administrador del Banco de Preguntas
-- **Como:** Profesor titular.  
-- **Quiero:** Ver el pool de 20 preguntas generadas para el informe de un estudiante, editar alternativas o agregar mis propias preguntas.  
-- **Para:** Garantizar la pertinencia y calidad académica de las preguntas antes de enviarlas.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 8 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Selección aleatoria y agregado personalizado
-    Dado un pool de 20 preguntas generadas
-    Cuando presiono "Selección Aleatoria (10)"
-    Y agrego una pregunta manual de tipo "Verdadero/Falso"
-    Entonces las 10 preguntas quedan marcadas con checkbox y la pregunta manual se suma al pool.
-  ```
-- **Tareas Técnicas:**
-  - `T-07.1`: Endpoints CRUD en `api/reports.py` (`/questions`, `/questions/{qid}`, `/select-random`, `/select`).
-  - `T-07.2`: Interfaz interactiva en la pestaña "6. Pool de Preguntas" con modal de creación de reactivos.
-
----
-
-#### 🟢 ÉPICA 5: Motor de Despacho y Flash Test en Tiempo Real (Alineada con OE3 y OE4)
-
-##### US-08: Despacho Asíncrono de Invitaciones por Correo (Gmail SMTP)
-- **Como:** Sistema evaluador.  
-- **Quiero:** Enviar un correo electrónico estilizado con un link seguro con token de un solo uso al estudiante.  
-- **Para:** Que el alumno ingrese a rendir su Flash Test sin necesidad de credenciales.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 5 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Generación de token y envío SMTP
-    Dado un banco de preguntas aprobado por el docente
-    Cuando se ejecuta send_flash_test()
-    Entonces se genera un flash_token UUIDv4, se calcula la fecha de expiración y se envía el correo vía aiosmtplib.
-  ```
-- **Tareas Técnicas:**
-  - `T-08.1`: Desarrollar módulo `services/email_service.py` con plantillas HTML y conexión TLS a `smtp.gmail.com`.
-  - `T-08.2`: Manejo de excepciones y registro de auditoría (`log_event`).
-
-##### US-09: Interfaz de Rendición Flash Test por WebSocket
-- **Como:** Estudiante evaluado.  
-- **Quiero:** Responder mis preguntas una a una con un temporizador visual en pantalla.  
-- **Para:** Completar la verificación de autoría de mi informe de forma ágil y dinámica.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 8 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Control estricto de tiempo y respuesta
-    Dado que el estudiante ha abierto su enlace /flash/[token]
-    Cuando se inicia la conexión WebSocket
-    Entonces el servidor entrega la pregunta con su tiempo límite, valida respuestas de forma atómica y cierra la sesión al finalizar mostrando la clasificación.
-  ```
-- **Tareas Técnicas:**
-  - `T-09.1`: WebSocket en `api/flash.py` con gestión de temporizadores en memoria `ACTIVE_TIMERS`.
-  - `T-09.2`: Página interactiva Next.js en `app/flash/[token]/page.tsx` con barra de progreso y manejo de estados.
-
----
-
-#### 🟢 ÉPICA 6: Agenda de Defensas y Cierre de Calificaciones (Alineada con OE4)
-
-##### US-10: Ruteo Inteligente y Agendamiento Automático de Citas
-- **Como:** Plataforma IntegriEval.  
-- **Quiero:** Clasificar el resultado del flash test y agendar una cita en el primer bloque libre del profesor si el alumno obtuvo puntaje bajo, alto o fue elegido al azar.  
-- **Para:** Coordinar la defensa presencial sin requerir intercambio manual de correos entre alumno y docente.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 5 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Convocatoria por puntaje bajo
-    Dado un estudiante que obtiene un score flash del 40% (umbral < 50%)
-    Cuando process_flash_test_result() finaliza
-    Entonces se marca review_required = True, se busca un slot en TeacherAvailability, se crea el Appointment y se despacha el correo de citación.
-  ```
-- **Tareas Técnicas:**
-  - `T-10.1`: Lógica de ruteo algorítmico y búsqueda de slots libres en `services/scheduling.py`.
-  - `T-10.2`: Función `send_appointment_email_sync()` en el servicio de correo.
-
-##### US-11: Cierre de Cita y Ajuste Definitivo de Nota
-- **Como:** Profesor titular.  
-- **Quiero:** Registrar el resultado de la reunión presencial (feedback) y ajustar la nota final del estudiante.  
-- **Para:** Concluir el proceso de evaluación de integridad académica formalmente.  
-- **Prioridad:** *MUST HAVE* | **Estimación:** 3 SP  
-- **Criterios de Aceptación:**
-  ```gherkin
-  Escenario: Cierre exitoso de defensa presencial
-    Dado un estudiante que defendió satisfactoriamente su trabajo
-    Cuando el docente ingresa su feedback y nota 0.95 en "8. Citas de Oficina"
-    Entonces la cita pasa a estado "completed" y la nota final del informe se actualiza a 0.95.
-  ```
-- **Tareas Técnicas:**
-  - `T-11.1`: Endpoint `POST /api/appointments/{id}/feedback` conectado con la actualización de `Report.final_score_percentage`.
-  - `T-11.2`: Panel interactivo de feedback en el dashboard del docente.
-
----
-
-### 4.3 Resumen de Esfuerzo y Planificación por Fases
+### 4.1 Resumen de Épicas y Estimación de Esfuerzo (61 Story Points)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -475,12 +238,12 @@ graph TD
 ╠═════════════════════════════════════════════════════════════════╦═══════════════╦══════════════╣
 ║ Épica                                                           ║ Historias     ║ Total SP     ║
 ╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╣
-║ ÉPICA 1: Gestión Académica y Nómina Sin Cuentas                 ║ US-01, US-02  ║ 8 SP         ║
-║ ÉPICA 2: Ingesta Masiva, Conversión a Markdown y Materiales     ║ US-03, US-04  ║ 13 SP        ║
-║ ÉPICA 3: Motor de Evaluación Contextual y Detección con IA      ║ US-05, US-06  ║ 11 SP        ║
-║ ÉPICA 4: Gestión Interactiva del Pool de Preguntas Flash        ║ US-07         ║ 8 SP         ║
-║ ÉPICA 5: Motor de Despacho y Flash Test en Tiempo Real          ║ US-08, US-09  ║ 13 SP        ║
-║ ÉPICA 6: Agenda de Defensas y Cierre de Calificaciones          ║ US-10, US-11  ║ 8 SP         ║
+║ ÉPICA 1: Gestión Académica y Nómina Sin Cuentas (OE1)           ║ US-01, US-02  ║ 8 SP         ║
+║ ÉPICA 2: Ingesta Masiva, Conversión a Markdown y Materiales (OE1)║ US-03, US-04 ║ 13 SP        ║
+║ ÉPICA 3: Motor de Evaluación Contextual y Detección con IA (OE2)║ US-05, US-06  ║ 11 SP        ║
+║ ÉPICA 4: Gestión Interactiva del Pool de Preguntas Flash (OE3)  ║ US-07         ║ 8 SP         ║
+║ ÉPICA 5: Motor de Despacho y Flash Test en Tiempo Real (OE3/OE4)║ US-08, US-09  ║ 13 SP        ║
+║ ÉPICA 6: Agenda de Defensas y Cierre de Calificaciones (OE4/OE5)║ US-10, US-11  ║ 8 SP         ║
 ╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╣
 ║ TOTAL GENERAL DEL BACKLOG                                       ║ 11 Historias  ║ 61 SP        ║
 ╚═════════════════════════════════════════════════════════════════╩═══════════════╩══════════════╝
@@ -488,6 +251,58 @@ graph TD
 
 ---
 
+### 4.2 Historias de Usuario Representativas y Criterios de Aceptación (Gherkin)
+
+#### US-02: Importación de Estudiantes vía CSV (Épica 1 — 5 SP | MUST HAVE)
+- **Como:** Docente o ayudante de cátedra.
+- **Quiero:** Subir un archivo CSV con la lista de mis alumnos (nombre y correo).
+- **Para:** Registrar a toda la sección en segundos sin que ellos deban crear una cuenta.
+- **Criterios de Aceptación (Gherkin):**
+  ```gherkin
+  Escenario: Carga masiva con formato Excel UTF-8 BOM
+    Dado un archivo CSV con columnas "Nombre,Correo"
+    Cuando el docente lo carga en la pestaña "2. Estudiantes"
+    Entonces el backend procesa las filas, omite correos duplicados y muestra el total de alumnos creados.
+  ```
+
+#### US-05: Análisis Automatizado de Pauta y Detección de IA (Épica 3 — 8 SP | MUST HAVE)
+- **Como:** Profesor evaluador.
+- **Quiero:** Que la IA analice cada trabajo contra la pauta y los materiales de clase.
+- **Para:** Obtener una nota preliminar justificada, desglose por rúbrica y porcentaje de probabilidad de IA.
+- **Criterios de Aceptación:**
+  ```gherkin
+  Escenario: Procesamiento asíncrono con feedback estructurado
+    Dado un informe PDF en estado "processing"
+    Cuando la IA completa el análisis con Claude 3.5 Sonnet
+    Entonces el estado cambia a "done", persistiendo la nota preliminar, feedback y desglose en JSON.
+  ```
+
+#### US-08: Despacho Asíncrono de Flash Test por Correo (Épica 5 — 5 SP | MUST HAVE)
+- **Como:** Sistema evaluador.
+- **Quiero:** Enviar un correo HTML institucional con un enlace tokenizado de un solo uso.
+- **Para:** Que el estudiante acceda a rendir su Flash Test seguro sin iniciar sesión.
+- **Criterios de Aceptación:**
+  ```gherkin
+  Escenario: Generación de token y envío SMTP
+    Dado un set de 10 preguntas aprobado por el profesor
+    Cuando se ejecuta send_flash_test()
+    Entonces se genera un token UUIDv4 con 48h de vigencia y se despacha el correo vía aiosmtplib.
+  ```
+
+#### US-10: Ruteo Inteligente y Agendamiento Automático de Citas (Épica 6 — 5 SP | MUST HAVE)
+- **Como:** Plataforma IntegriEval.
+- **Quiero:** Clasificar el resultado del flash test y agendar una cita en el primer bloque libre del profesor.
+- **Para:** Coordinar la defensa presencial automáticamente si el alumno obtuvo puntaje bajo, alto o aleatorio.
+- **Criterios de Aceptación:**
+  ```gherkin
+  Escenario: Convocatoria automática por score bajo
+    Dado un estudiante con score flash del 40% (umbral bajo < 50%)
+    Cuando finaliza la sesión
+    Entonces se marca review_required = True, se asigna el primer bloque disponible del profesor y se envía la notificación de cita por correo.
+  ```
+
+---
+
 ## 5. Conclusiones y Valor Estratégico
 
-IntegriEval resuelve la encrucijada actual entre la proliferación de herramientas generativas de IA y la necesidad irrenunciable de certificar aprendizajes auténticos en la educación superior. Al reemplazar los detectores tradicionales de 'caja negra' por un **mecanismo híbrido de evaluación contextual, exámenes flash cronometrados y defensa oral focalizada**, la plataforma protege la integridad académica, ahorra cientos de horas hombre docentes y garantiza un trato ético, transparente y libre de fricción para los estudiantes.
+IntegriEval resuelve la tensión contemporánea entre la adopción de herramientas de IA generativa y la exigencia de certificar competencias académicas fidedignas. Al reemplazar los detectores tradicionales de caja negra por un **modelo híbrido de análisis contextualizado, evaluación flash reactiva y defensa oral focalizada**, la plataforma optimiza el tiempo docente, garantiza transparencia ética y entrega una experiencia ágil y justa para toda la comunidad universitaria.
