@@ -69,7 +69,8 @@ def build_pdf(filename="docs/blueprint_integrieval.pdf"):
     styles.add(ParagraphStyle('DocBullet', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=c_text, leftIndent=8, spaceAfter=2))
     styles.add(ParagraphStyle('TCell', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=c_text))
     styles.add(ParagraphStyle('THead', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=10, textColor=colors.white))
-    styles.add(ParagraphStyle('JsonCode', parent=styles['Normal'], fontName='Courier', fontSize=7, leading=9, textColor=c_text))
+    styles.add(ParagraphStyle('JsonCode', parent=styles['Normal'], fontName='Courier', fontSize=7.5, leading=10.5, textColor=colors.HexColor("#0F172A")))
+    styles.add(ParagraphStyle('JsonCodeDark', parent=styles['Normal'], fontName='Courier', fontSize=7.5, leading=10.5, textColor=colors.HexColor("#E2E8F0")))
 
     story = []
 
@@ -323,12 +324,22 @@ def build_pdf(filename="docs/blueprint_integrieval.pdf"):
     "requiere_defensa_oral": true
   }
 }"""
-    t_json = Table([[Paragraph(f"<pre>{json_sample.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</pre>", styles['JsonCode'])]], colWidths=[504])
+    # Format JSON with HTML tags for ReportLab
+    formatted_json_lines = []
+    for line in json_sample.split("\n"):
+        indent_count = len(line) - len(line.lstrip(" "))
+        indent_str = "&nbsp;&nbsp;" * (indent_count // 2 if indent_count > 0 else 0)
+        safe_line = line.strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', '&quot;')
+        formatted_json_lines.append(f"{indent_str}{safe_line}")
+    
+    json_html = "<br/>".join(formatted_json_lines)
+    p_json = Paragraph(f"<font color='#F8FAFC'>{json_html}</font>", styles['JsonCodeDark'])
+    
+    t_json = Table([[p_json]], colWidths=[504])
     t_json.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#0F172A")),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#334155")),
         ('PADDING', (0,0), (-1,-1), 8),
-        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#E2E8F0")),
     ]))
     story.append(t_json)
 
