@@ -1,477 +1,273 @@
-# Blueprint de Arquitectura de Software: IntegriEval
-**Plataforma Semi-Automatizada de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash**  
-*Generado bajo el estándar metodológico de El Arquitecto Innovares*  
-**Versión:** 1.0.0 (Septiembre 2026)  
+# Blueprint de Arquitectura y Especificación del Sistema: IntegriEval
+**Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash**  
+*Documento de Especificación Formal de Ingeniería de Software — Trabajo de Título (INFO1197)*  
 **Autores:** Sebastian Cisternas, Benjamin Sobarzo  
-**Proyecto Base:** Trabajo de Título (INFO1197) — Ingeniería Civil Informática  
+**Fecha:** Septiembre 2026 | **Versión:** 1.0 (Borrador para validación)  
+**Facultad:** Ingeniería Civil Informática | **Repositorio:** github.com/blosttt/IntegriEval  
 
 ---
 
-## 1. Visión del Proyecto
+## 1. Definición del Problema y Alcance
 
-### 1.1 Qué es y Para Quién
-**IntegriEval** es una plataforma web orientada a la educación superior diseñada para asistir a docentes y ayudantes universitarios en la evaluación de trabajos académicos (PDF/DOCX), la detección contextualizada de contenido sintetizado por Inteligencia Artificial y la verificación del aprendizaje real del estudiante mediante evaluaciones orales y pruebas *Flash* cronometradas en tiempo real.
+### 1.1 Contexto y Antecedentes
+La democratización de los Modelos de Lenguaje Grande (LLMs) ha transformado la evaluación en la educación superior. Los estudiantes entregan trabajos digitales en los LMS institucionales (Canvas, Moodle, Blackboard), pero los docentes carecen de herramientas confiables y pedagógicamente justas para verificar si el contenido refleja las competencias reales del estudiante o fue generado por IA.
 
-### 1.2 Problema Central que Resuelve
-1. **Ineficacia de los Detectores Estadísticos de 'Caja Negra':** Herramientas como Turnitin AI y GPTZero presentan elevadas tasas de falsos positivos y negativos al basarse únicamente en perplejidad y *burstiness*. Acusar disciplinariamente a un alumno sin pruebas tangibles genera incertidumbre ética y jurídica.
-2. **Inviabilidad Logística de la Interrogación Universal:** En cursos masivos (60 a 200 estudiantes), es físicamente imposible examinar oralmente al 100% de la nómina por limitaciones horarias de atención docente.
-3. **Sobrecarga en la Corrección Mecánica:** Los docentes dedican hasta 25 horas semanales a cotejar informes contra pautas y materiales de cátedra.
+### 1.2 Articulación del Problema (3 Dimensiones Críticas)
+1. **Inviabilidad de los Detectores Estadísticos de 'Caja Negra':** Herramientas como Turnitin AI tienen altas tasas de falsos positivos y negativos, careciendo de validez jurídica y ética para sanciones.
+2. **Inviabilidad Logística de la Interrogación Universal:** La defensa oral presencial es efectiva, pero es humanamente imposible de implementar en cursos masivos (60 a 200 alumnos).
+3. **Sobrecarga Cognitiva y Temporal:** Los docentes dedican hasta 25 horas semanales a la corrección mecánica de informes contra pauta.
 
-### 1.3 Métricas de Éxito
-- **Tasa de conversión documental $\ge 98\%$** en PDFs de informes y syllabus a Markdown estructurado.
-- **Tiempo de respuesta $\le 15\text{s}$** por informe para análisis de rúbrica y detección contextual mediante workers asíncronos.
-- **Reducción de $\ge 60\%$** en el tiempo invertido por el docente en revisión mecánica y citación a oficina.
-- **$100\%$ de confirmación explícita docente** sobre las notas finales antes de su publicación (*Human-in-the-Loop*).
-- **Cero fricción de autenticación** para estudiantes mediante enlaces tokenizados de un solo uso despachados por correo electrónico.
+### 1.3 Validación con Partes Interesadas (Stakeholders)
+- **Docentes:** *"No sé si el alumno aprendió o si un LLM hizo el trabajo. No puedo interrogar a 100 alumnos ni acusar a nadie sin pruebas."* $\rightarrow$ **Expectativa:** Herramienta que entregue notas preliminares justificadas y evidencia para la toma de decisiones respecto del alumnado (ej: a quiénes citar para defensa oral).
+- **Ayudantes:** *"Revisar 80 PDFs idénticos es agotador y dilata la retroalimentación."* $\rightarrow$ **Expectativa:** Subida masiva en lote y extracción de resúmenes estructurados en Markdown.
+- **Estudiantes:** *"Frustrante que un detector te acuse injustamente. Si hay dudas, prefiero que me hagan preguntas sobre mi trabajo."* $\rightarrow$ **Expectativa:** Proceso transparente y derecho a defensa oral.
+- **Dirección de Carrera:** *"Debemos resguardar el prestigio y evitar sanciones arbitrarias que deriven en litigios."* $\rightarrow$ **Expectativa:** Trazabilidad auditable y defensas orales fundamentadas en evidencia.
 
 ---
 
-## 2. Tech Stack y Justificación Técnica
+## 2. Objetivos del Proyecto y Trazabilidad
 
-| Capa | Tecnología Seleccionada | Justificación Técnica y Operativa |
+### 2.1 Objetivo General
+Desarrollar un MVP de plataforma web que asista al docente en la verificación del aprendizaje real del estudiante, a través de un flujo que integra análisis automatizado del PDF, generación de preguntas flash personalizadas y soporte para validación oral focalizada, sin reemplazar el criterio docente como autoridad final.
+
+> **Alcance del Proyecto:** Educación superior, con enfoque en cursos masivos de estudiantes, MVP open-source y sin costos recurrentes. No incluye integración LMS en su versión inicial.
+
+---
+
+### 2.2 Objetivos Específicos (Criterios SMART por Sprint)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ OE1 (Sprint 1): Análisis de Requerimientos                                                                      │
+│ • Enunciado: Analizar los requerimientos funcionales y no funcionales del proceso de verificación de            │
+│   aprendizaje.                                                                                                  │
+│ • Specific: Levantamiento de problema, actores y restricciones.                                                 │
+│ • Measurable: Documento validado con matriz de trazabilidad completa.                                           │
+│ • Relevant: Base para el diseño correcto del MVP.                                                               │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ OE2 (Sprint 2): Diseño de Arquitectura y Decisiones Técnicas                                                    │
+│ • Enunciado: Diseñar la arquitectura del sistema y las decisiones técnicas del MVP.                             │
+│ • Specific: Arquitectura sin login, evaluación contextual con LLM, estrategia costo-cero (sección 3.7).        │
+│ • Measurable: 100% de decisiones técnicas justificadas en matriz de alternativas.                              │
+│ • Relevant: Evita retrabajo en implementación.                                                                  │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ OE3 (Sprint 3): Implementación de Módulos Funcionales del MVP                                                   │
+│ • Enunciado: Implementar los módulos funcionales del MVP.                                                       │
+│ • Specific: Ingesta/nómina, motor IA, pool de preguntas, flash test, panel y cierre.                            │
+│ • Measurable: 61 Story Points entregados en 4 Sprints (11 Historias de Usuario).                                │
+│ • Relevant: Entrega funcional completa.                                                                         │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ OE4 (Sprint 4): Validación de Funcionamiento y Control Docente                                                  │
+│ • Enunciado: Validar el funcionamiento del sistema y el control docente sobre el resultado.                    │
+│ • Specific: Rendimiento (<=15s, <=100ms), precisión detección IA (>=75%), 100% notas confirmadas por docente.  │
+│ • Measurable: Métricas RNF cumplidas + AuditLog inmutable verificado.                                           │
+│ • Relevant: Confianza y cumplimiento ético/legal.                                                               │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 2.3 Matriz de Trazabilidad (Problema vs. Objetivos vs. Entregables)
+
+| Dimensión del Problema | Objetivo(s) | Entregable Concreto |
 |---|---|---|
-| **Frontend Framework** | **Next.js 15 (App Router)** + TypeScript | Renderizado híbrido (SSR para vistas públicas, CSR reactivo para paneles), tipado estricto y alto rendimiento. |
-| **Estilos & UI** | **Tailwind CSS v4** + **shadcn/ui** | Consistencia visual, accesibilidad WCAG 2.1 AA, tema oscuro de alto contraste y componentes reutilizables sin sobrecarga. |
-| **Backend API** | **FastAPI (Python 3.14)** + Pydantic v2 | Alto rendimiento asíncrono, compatibilidad nativa con Starlette WebSockets para exámenes en vivo y validación estricta de schemas. |
-| **Base de Datos & ORM** | **PostgreSQL** (Supabase / Self-hosted NAS) / **SQLite** local + **SQLAlchemy 2.0** | Soporte transaccional ACID, esquemas relacionales robustos y capacidad de migración fluida entre local y cloud. |
-| **Extracción Semántica** | **`pymupdf4llm`** (MuPDF) | Extracción de PDFs/DOCX a Markdown estructurado preservando jerarquía de títulos, tablas y listas, reduciendo un 40% el ruido léxico para el LLM. |
-| **Motor de Inferencia IA** | **Claude 3.5 Sonnet** (Anthropic API) + **Mock Engine** (Fallback) | Razonamiento contextual superior para análisis de rúbricas; motor heurístico local para garantizar continuidad operacional sin red. |
-| **Tiempo Real (Flash Test)** | **WebSockets bidireccionales** (Starlette/FastAPI) | Comunicación bidireccional con latencia $\le 50\text{ms}$ y temporización server-side estricta de 60 segundos por reactivo. |
-| **Servicio de Correo** | **Gmail SMTP Asíncrono** (`aiosmtplib`) / **Resend** | Despacho seguro de tokens UUIDv4 a costo cero para el MVP institucional con soporte para hasta 500 envíos diarios. |
-| **Hosting & Infraestructura** | **Vercel** (Frontend) + **GMKtec M5 / Mac mini M4** + **Cloudflare Tunnel** | Arquitectura híbrida: UI global en edge de Vercel y API/Workers persistentes auto-hospedados con URL segura HTTPS fija. |
+| **Falsos positivos de detectores IA** | OE2, OE3 | Evaluación contextualizada con pauta y generación de preguntas personalizadas. |
+| **Imposibilidad logística de interrogar a todos** | OE3 | Panel de resultados que filtra estudiantes por puntaje para decidir a quién citar. |
+| **Fricción de adopción tecnológica** | OE2, OE3 | Acceso sin login con nómina CSV y enlaces tokenizados (UUIDv4). |
+| **Evaluación sin contexto de la asignatura** | OE2 | Inyección de syllabus, guías y rúbricas en el prompt del LLM. |
+| **Pérdida de control del docente** | OE3, OE4 | Editor de preguntas y panel de cierre con confirmación explícita de nota. |
+| **Presupuesto cero para el MVP** | OE2, OE3 | Despacho con Gmail SMTP gratuito y arquitectura de costo cero. |
+| **Docente no puede probar el uso indebido de IA** | OE3, OE4 | Desglose JSON y AuditLog inmutable. |
+| **Tiempo excesivo en corrección mecánica** | OE3, OE4 | Automatización del análisis preliminar, focalizando tiempo docente en defensas. |
 
 ---
 
-## 3. Estructura de Directorios del Proyecto
+## 3. Especificación Formal de Requerimientos
 
-```tree
-IntegriEval/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   ├── appointments.py      # Agendamiento y cierre de defensas orales
-│   │   │   ├── courses.py           # CRUD de asignaturas y parámetros de rúbrica
-│   │   │   ├── dashboard.py         # Métricas globales y AuditLog
-│   │   │   ├── evaluations.py       # Configuración de evaluaciones y rigor
-│   │   │   ├── flash.py             # Validación de tokens y WebSocket de examen en vivo
-│   │   │   ├── materials.py         # Carga de syllabus y guías de cátedra
-│   │   │   ├── reports.py           # Ingesta en lote de PDFs y pool de preguntas
-│   │   │   └── students.py          # Parser CSV de nóminas y gestión de alumnos
-│   │   ├── core/
-│   │   │   ├── config.py            # Variables de entorno y settings Pydantic
-│   │   │   ├── database.py          # Engine SQLAlchemy y session maker
-│   │   │   └── security.py          # Hashing bcrypt y validación de tokens
-│   │   ├── models/
-│   │   │   └── models.py            # Entidades SQLAlchemy (Usuario, Estudiante, etc.)
-│   │   ├── schemas/
-│   │   │   └── schemas.py           # Modelos Pydantic de validación request/response
-│   │   ├── services/
-│   │   │   ├── ai_service.py        # Integración Anthropic Claude 3.5 y Mock Engine
-│   │   │   ├── email_service.py     # Despacho SMTP asíncrono con plantillas HTML
-│   │   │   ├── extractor.py         # pymupdf4llm para conversión PDF -> Markdown
-│   │   │   └── scheduling.py       # Algoritmo de ruteo y asignación de citas
-│   │   └── main.py                  # Entrypoint FastAPI, CORS y registro de routers
-│   ├── tests/
-│   │   ├── test_ai.py
-│   │   ├── test_api.py
-│   │   └── test_websocket.py
-│   ├── pyproject.toml
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx           # Root layout con providers
-│   │   │   ├── page.tsx             # Landing institucional informativa
-│   │   │   ├── flash/
-│   │   │   │   └── [token]/
-│   │   │   │       └── page.tsx     # Sala de examen Flash en tiempo real (WebSocket)
-│   │   │   └── teacher/
-│   │   │       ├── dashboard/
-│   │   │       │   └── page.tsx     # Panel 9-en-1 del profesor
-│   │   │       └── login/
-│   │   │           └── page.tsx     # Autenticación docente
-│   │   ├── components/
-│   │   │   ├── ui/                  # Componentes shadcn (Button, Dialog, Badge, etc.)
-│   │   │   ├── Dropzone.tsx         # Subida masiva drag & drop
-│   │   │   ├── QuestionEditor.tsx   # Editor de reactivos y selector de 10 preguntas
-│   │   │   ├── FlashTimer.tsx       # Temporizador circular SVG de 60s
-│   │   │   └── AuditLogTable.tsx    # Tabla inmutable de eventos
-│   │   ├── lib/
-│   │   │   ├── api.ts               # Cliente API tipado con Axios / Fetch
-│   │   │   └── utils.ts
-│   │   └── types/
-│   │       └── index.ts             # Tipos TypeScript compartidos
-│   ├── package.json
-│   ├── tailwind.config.ts
-│   └── tsconfig.json
-├── docs/
-│   ├── blueprint_integrieval.pdf
-│   ├── documento_ingenieria_integrieval.docx
-│   └── documento_ingenieria_integrieval.tex
-├── output/
-│   └── integrieval-blueprint.md
-└── CLAUDE.md                        # Guía de construcción y reglas para Claude Code
+### 3.1 Requerimientos Funcionales (RF-001 al RF-015)
+
+| ID | Requisito Funcional | Prioridad | Estado |
+|---|---|---|---|
+| **RF-001** | Crear y gestionar asignaturas (nombre, periodo, año). | Must | Bueno |
+| **RF-002** | Ingesta de CSV con nombres y correos, validando formato y duplicados. | Must | Bueno |
+| **RF-003** | Configurar: prompt, rigor, pool (10-30), umbrales visuales. | Must | Bueno |
+| **RF-004** | Subir materiales (PDF/DOCX) y convertirlos a Markdown para contexto. | Must | Bueno |
+| **RF-005** | Carga masiva de PDFs y asociación automática por nombre de archivo. | Must | Bueno |
+| **RF-006** | Extraer PDFs a Markdown preservando títulos, tablas y listas. | Must | Bueno |
+| **RF-007** | Evaluar con Modelos LLM: nota, feedback, % detección IA (según estructura JSON Anexo A). | Must | Bueno |
+| **RF-008** | Mediante el LLM, generar un pool de X preguntas basadas en la temática y contenidos del informe (apoyado con material subido). | Must | Bueno |
+| **RF-009** | Permitir al docente editar/eliminar/agregar preguntas y seleccionar cuántas incluirá en la prueba flash ($N \le \text{Pool}$). | Must | Bueno |
+| **RF-010** | Despachar flash test con tokens UUIDv4 (48h) vía Gmail SMTP. | Must | Bueno |
+| **RF-011** | Interfaz flash test con WebSockets, temporizador 60+s/flash-test. | Must | Bueno |
+| **RF-012** | Panel de resultados para docente con métricas clave para decisión. | Must | Bueno |
+| **RF-013** | Registrar acuerdos de defensas, ajustar nota final y audit log inmutable. | Must | Bueno |
+| **RF-014** | Contar con Mock Engine de contingencia. | Should | Bueno |
+| **RF-015** | Autenticación docente (Pendiente de formalización). | Por definir | Incompleto |
+
+---
+
+### 3.2 Requerimientos No Funcionales (RNF-001 al RNF-013)
+
+| ID | Categoría | Requisito | Métrica | Prioridad | Estado |
+|---|---|---|---|---|---|
+| **RNF-001** | Rendimiento | Soportar 100 conexiones WebSocket concurrentes. | Latencia $\le 50\text{ms}$ | Must | Bueno |
+| **RNF-002** | Rendimiento | Procesar informe en $\le 15\text{s}$ (CPU). | $95\%$ de casos | Must | Bueno |
+| **RNF-003** | Rendimiento | API de cierre de calificaciones. | $\le 200\text{ms}$ | Should | Bueno |
+| **RNF-004** | Seguridad | Tokens UUIDv4 (RFC 4122). | UUIDv4 | Must | Bueno |
+| **RNF-005** | Seguridad | Contraseñas con bcrypt. | Factor $\ge 12$ | Must | Bueno |
+| **RNF-006** | Seguridad | RBAC por asignatura. | RBAC | Must | Bueno |
+| **RNF-007** | Resiliencia | Fallback automático a Mock Engine. | Timeout $> 30\text{s}$ | Should | Bueno |
+| **RNF-008** | Resiliencia | Reconexión WebSocket. | $\le 120\text{s}$ | Should | Bueno |
+| **RNF-009** | Usabilidad | WCAG 2.1 AA y tema oscuro. | WCAG 2.1 AA | Could | Bueno |
+| **RNF-010** | Costo | $100\%$ open-source, sin costos recurrentes. | Sin costos | Must | Bueno |
+| **RNF-011** | Disponibilidad | Pendiente: $[X]\%$ en horario de evaluación. | Por definir | Por definir | Incompleto |
+| **RNF-012** | Escalabilidad | Pendiente: $[X]$ estudiantes simultáneos. | Por definir | Por definir | Incompleto |
+| **RNF-013** | Privacidad | Cumplimiento Ley N° 21.719 (Protección de Datos Personales Chile). | Verificable antes de 01/12/2026 | Must | Requiere ajuste |
+
+---
+
+### 3.3 Reglas de Negocio (RN-001 al RN-007)
+
+- **RN-001 (Acceso Tokenizado):** Token UUIDv4 válido con vigencia de 48h. Permite acceso al test y se invalida tras el primer uso.
+- **RN-002 (Temporizador Expirado):** Al expirar el temporizador de 60s/pregunta, el sistema registra respuesta parcial y calcula puntaje sobre las preguntas respondidas.
+- **RN-003 (Panel de Indicadores):** Umbrales parametrizables por asignatura en `Asignatura.parametros` (RF-003). El sistema resalta visualmente a los alumnos críticos.
+- **RN-004 (Nota Final Editable):** La nota final es editable por el docente dentro del rango, con campo de justificación obligatorio (por defecto *"Criterio del docente"*). Persiste con auditoría (usuario, fecha, hora).
+- **RN-005 (Pendiente):** Ausencia a defensa sin justificación.
+- **RN-006 (Pendiente):** Solicitud de reprogramación.
+- **RN-007 (Pendiente):** Pérdida de enlace $\rightarrow$ reenvío.
+
+---
+
+### 3.4 Requerimientos de Integración (RI-001 al RI-003)
+
+- **RI-001 (LLM Auto-hospedado / API):** LLM open-source (Llama 3.x o Qwen2.5 vía Ollama / Claude 3.5 Sonnet) local sin costo API. Bidireccional REST HTTPS para evaluación y generación de preguntas.
+- **RI-002 (Gmail SMTP):** Protocolo SMTP TLS para envío unidireccional de correos con enlaces tokenizados.
+- **RI-003 (Pendiente LMS Blackboard):** API para sincronización de nóminas y notas (Incompleto / Futuro).
+
+---
+
+### 3.5 Requerimientos de Datos (Entidades y Atributos Clave)
+
+- **Usuario:** `id`, `nombre`, `correo` (único), `contraseña` (bcrypt), `rol`, `asignaturas`.
+- **Asignatura:** `id`, `nombre`, `periodo`, `año`, `docente_id`, `parámetros` (JSON).
+- **Estudiante:** `id`, `nombre`, `correo` (único por asignatura), `asignatura_id`.
+- **Trabajo:** `id`, `estudiante_id`, `pdf_path`, `markdown`, `estado`.
+- **Material:** `id`, `asignatura_id`, `nombre`, `tipo`, `markdown`.
+- **Evaluacion:** `id`, `trabajo_id`, `nota` (1-7), `feedback` (JSON), `% IA` (0-100), `desglose`.
+- **Pregunta:** `id`, `evaluacion_id`, `texto`, `alternativas` (JSON), `seleccionada`.
+- **FlashTest:** `id`, `estudiante_id`, `token` (único), `vigencia` (48h), `respuestas` (JSON), `puntaje`, `estado`.
+- **Cita:** `id`, `estudiante_id`, `docente_id`, `fecha`, `bloque`, `estado`, `creada_por`.
+- **AuditLog:** `id`, `usuario_id`, `accion`, `tabla`, `registro_id`, `timestamp`, `datos_previos` (JSON), `datos_nuevos` (JSON).  
+*(Observaciones: Retención de datos pendiente; AuditLog inmutable).*
+
+---
+
+### 3.6 Evaluación Crítica de Alternativas (Sección 3.7)
+
+#### Validación del Aprendizaje:
+- **A: Solo detector de IA:** Ventajas: Fácil de implementar | Desventajas: No verifica aprendizaje | **Conclusión:** *Descartada* (No resuelve el problema de fondo).
+- **B: Solo entrevista oral humana:** Ventajas: Verifica aprendizaje con alta certeza | Desventajas: No es escalable | **Conclusión:** *Descartada* (Impracticable en la mayoría de contextos masivos).
+- **C: Nuestra solución (Detección + Flash Test + Panel):** Ventajas: Combina automatización con juicio humano; escala bien | Desventajas: Mayor complejidad técnica | **Conclusión:** *Seleccionada* (Equilibra lo mejor de ambos).
+
+#### Alternativas Tecnológicas:
+- **Acceso alumno:** *Selección:* Token vía Email (elimina fricción de registro; valida posesión del correo oficial).
+- **Estrategia de Integridad:** *Selección:* Flash Test Contextual (evita falsos positivos evaluando autoría real).
+- **Conversión PDF:** *Selección:* `pymupdf4llm` (conserva jerarquía de encabezados, tablas y listas con 40% menos de ruido léxico).
+- **Servicio de Email:** *Selección:* Gmail SMTP `aiosmtplib` (cero costo para el MVP con hasta 500 correos diarios).
+
+---
+
+## 4. Planificación del Proyecto y Product Backlog (61 Story Points)
+
+### 4.1 Resumen de Épicas y Distribución por Sprints
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                 PLANIFICACIÓN DE SPRINTS Y ÉPICAS                                     ║
+╠═════════════════════════════════════════════════════════════════╦═══════════════╦══════════════╦══════╣
+║ Épica                                                           ║ Historias     ║ Total SP     ║Sprint║
+╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╬══════╣
+║ ÉPICA 1: Gestión y Nómina (OE1)                                 ║ US-01, US-02  ║ 8 SP         ║ Sp. 1║
+║ ÉPICA 2: Ingesta y Conversión (OE1)                             ║ US-03, US-04  ║ 13 SP        ║ Sp. 1║
+║ ÉPICA 3: Motor de Evaluación (OE2)                              ║ US-05, US-06  ║ 11 SP        ║ Sp. 2║
+║ ÉPICA 4: Pool de Preguntas (OE3)                                ║ US-07         ║ 8 SP         ║ Sp. 3║
+║ ÉPICA 5: Despacho y Flash Test (OE3)                            ║ US-08, US-09  ║ 13 SP        ║ Sp. 3║
+║ ÉPICA 6: Resultados y Cierre (OE4)                              ║ US-10, US-11  ║ 8 SP         ║ Sp. 4║
+╠═════════════════════════════════════════════════════════════════╬═══════════════╬══════════════╬══════╣
+║ TOTAL GENERAL DEL BACKLOG                                       ║ 11 Historias  ║ 61 SP        ║4 Sp. ║
+╚═════════════════════════════════════════════════════════════════╩═══════════════╩══════════════╩══════╝
 ```
 
----
-
-## 4. Modelo de Datos y Esquema SQL
-
-### 4.1 Entidades y Relaciones
-```sql
--- Esquema PostgreSQL / Supabase para IntegriEval
-
-CREATE TABLE IF NOT EXISTS usuarios (
-    id SERIAL PRIMARY KEY,
-    nombre VARCHAR(150) NOT NULL,
-    correo VARCHAR(150) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    rol VARCHAR(50) DEFAULT 'docente', -- 'docente' | 'admin' | 'ayudante'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS asignaturas (
-    id SERIAL PRIMARY KEY,
-    docente_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    nombre VARCHAR(200) NOT NULL,
-    periodo VARCHAR(50) NOT NULL,
-    anio INT NOT NULL,
-    parametros JSONB DEFAULT '{"rigor": "medium", "pool_size": 20, "flash_size": 10, "umbral_bajo": 50, "umbral_alto": 95, "porcentaje_aleatorio": 10}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS estudiantes (
-    id SERIAL PRIMARY KEY,
-    asignatura_id INT NOT NULL REFERENCES asignaturas(id) ON DELETE CASCADE,
-    nombre VARCHAR(150) NOT NULL,
-    correo VARCHAR(150) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_estudiante_asignatura UNIQUE (asignatura_id, correo)
-);
-
-CREATE TABLE IF NOT EXISTS materiales (
-    id SERIAL PRIMARY KEY,
-    asignatura_id INT NOT NULL REFERENCES asignaturas(id) ON DELETE CASCADE,
-    nombre VARCHAR(200) NOT NULL,
-    tipo VARCHAR(50) NOT NULL, -- 'syllabus' | 'guia' | 'rubrica'
-    markdown_content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS trabajos (
-    id SERIAL PRIMARY KEY,
-    estudiante_id INT NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
-    pdf_path VARCHAR(500) NOT NULL,
-    markdown_content TEXT NOT NULL,
-    estado VARCHAR(50) DEFAULT 'uploaded', -- 'uploaded' | 'processing' | 'done' | 'error'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS evaluaciones (
-    id SERIAL PRIMARY KEY,
-    trabajo_id INT UNIQUE NOT NULL REFERENCES trabajos(id) ON DELETE CASCADE,
-    nota_preliminar NUMERIC(3, 1), -- Escala 1.0 a 7.0
-    porcentaje_ia INT DEFAULT 0,   -- 0 a 100%
-    feedback JSONB DEFAULT '{}'::jsonb,
-    desglose_rubrica JSONB DEFAULT '{}'::jsonb,
-    nota_final NUMERIC(3, 1),
-    estado_cierre VARCHAR(50) DEFAULT 'pendiente', -- 'pendiente' | 'confirmada' | 'revisada_oral'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS preguntas (
-    id SERIAL PRIMARY KEY,
-    evaluacion_id INT NOT NULL REFERENCES evaluaciones(id) ON DELETE CASCADE,
-    enunciado TEXT NOT NULL,
-    tipo VARCHAR(50) DEFAULT 'multiple_choice', -- 'multiple_choice' | 'true_false'
-    alternativas JSONB NOT NULL,
-    respuesta_correcta VARCHAR(10) NOT NULL,
-    explicacion TEXT,
-    seleccionada BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS flash_tests (
-    id SERIAL PRIMARY KEY,
-    estudiante_id INT NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
-    evaluacion_id INT NOT NULL REFERENCES evaluaciones(id) ON DELETE CASCADE,
-    token VARCHAR(64) UNIQUE NOT NULL,
-    vigencia TIMESTAMP WITH TIME ZONE NOT NULL,
-    respuestas JSONB DEFAULT '[]'::jsonb,
-    puntaje NUMERIC(5, 2) DEFAULT 0.0,
-    tiempo_empleado INT DEFAULT 0,
-    estado VARCHAR(50) DEFAULT 'pending', -- 'pending' | 'in_progress' | 'completed' | 'expired'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS citas (
-    id SERIAL PRIMARY KEY,
-    estudiante_id INT NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
-    docente_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    fecha DATE NOT NULL,
-    bloque VARCHAR(50) NOT NULL,
-    motivo VARCHAR(100) NOT NULL, -- 'score_bajo' | 'score_alto' | 'control_aleatorio'
-    estado VARCHAR(50) DEFAULT 'programada', -- 'programada' | 'realizada' | 'cancelada'
-    acuerdos TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id SERIAL PRIMARY KEY,
-    usuario_id INT REFERENCES usuarios(id) ON DELETE SET NULL,
-    accion VARCHAR(100) NOT NULL,
-    tabla_afectada VARCHAR(100) NOT NULL,
-    registro_id INT NOT NULL,
-    datos_previos JSONB,
-    datos_nuevos JSONB,
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
+* **Sprint 1 (Ingesta):** Épicas 1 y 2 (US-01 a US-04) = **21 SP** ($\approx 4.2$ semanas)
+* **Sprint 2 (Análisis):** Épica 3 (US-05, US-06) = **11 SP** ($\approx 2.2$ semanas)
+* **Sprint 3 (Reactivos y Despacho):** Épicas 4 y 5 (US-07 a US-09) = **21 SP** ($\approx 4.2$ semanas)
+* **Sprint 4 (Resultados y Cierre):** Épica 6 (US-10, US-11) = **8 SP** ($\approx 1.6$ semanas)
+* **Total del Proyecto:** 11 Historias Refinadas, 61 Story Points, $\approx 12.2$ semanas.
 
 ---
 
-## 5. Diseño de API RESTful y WebSockets
+### 4.2 Desglose de Historias de Usuario y Criterios de Aceptación
 
-### 5.1 Endpoints Principales
+- **US-01: Creación y Gestión de Asignaturas (3 SP):** Como Docente quiero crear y gestionar asignaturas para organizar mis cursos. *CA:* Dado un docente autenticado, cuando crea una asignatura, entonces queda registrada.
+- **US-02: Importación de Estudiantes vía CSV (5 SP):** Como Docente o ayudante quiero subir CSV con lista de alumnos para registrar la sección en segundos. *CA:* Dado un CSV válido, cuando el docente lo sube, entonces se procesa y se informa el total de alumnos creados.
+- **US-03: Subida Masiva de Trabajos y Conversión a Markdown (8 SP):** Como Ayudante o Docente quiero subir múltiples PDFs y extraer su contenido para automatizar la ingesta. *CA:* Dado un conjunto de PDFs, cuando se suben en lote, entonces cada PDF se convierte a Markdown.
+- **US-04: Gestión de Materiales de Apoyo (5 SP):** Como Docente quiero subir syllabus y rúbricas para dar contexto al LLM. *CA:* Dado un docente, cuando sube un syllabus, entonces se guarda como contexto.
+- **US-05: Análisis Automatizado con LLM (8 SP):** Como Docente quiero que la IA analice cada trabajo contra la pauta para obtener una nota preliminar justificada. *CA:* Dado un PDF en estado "processing", cuando el análisis termina, entonces el estado cambia a "done".
+- **US-06: Motor de Contingencia (Mock Engine) (3 SP):** Como Sistema quiero tener un fallback sin conexión para garantizar operatividad. *CA:* Dado un fallo en la API de Anthropic, cuando se intenta analizar, entonces se usa el Mock Engine.
+- **US-07: Generación y Gestión del Pool de Preguntas (8 SP):** Como Docente quiero revisar, editar y aprobar un subconjunto de preguntas generadas por IA antes de enviarlas al estudiante para garantizar que sean respondibles por quien realizó el trabajo y alineadas con la rúbrica.
+  - *CA-a:* Dado un informe analizado, cuando el docente accede al generador, se muestran 20 preguntas editables individualmente.
+  - *CA-b:* Dado una pregunta genérica, cuando la edita o descarta, el sistema permite reemplazarla o dejar el pool con menos de 20.
+  - *CA-c:* Dado un pool revisado, cuando marca 10 como aprobadas, el sistema bloquea el envío hasta que exactamente 10 estén seleccionadas.
+  - *CA-d:* Dado menos de 10 aprobadas, cuando intenta despachar (US-08), el sistema impide la acción y muestra advertencia.
+- **US-08: Despacho Asíncrono de Flash Test por Correo (5 SP):** Como Sistema quiero enviar correo con enlace tokenizado para acceso seguro del estudiante. *CA:* Dado un set de 10 preguntas aprobado, cuando se ejecuta el despacho, se genera un token UUIDv4 y se envía el correo.
+- **US-09: Interfaz del Flash Test en Tiempo Real (WebSocket) (8 SP):** Como Estudiante quiero responder con temporizador y feedback para demostrar mi comprensión. *CA:* Dado un estudiante con token válido, cuando accede al test, responde (60s/pregunta) y recibe su puntaje.
+- **US-10: Panel de Resultados del Flash Test (5 SP):** Como Docente quiero visualizar resultados con indicadores clave para tomar decisiones (citar a defensa oral). *CA:* Dado un curso con estudiantes que han rendido el test, cuando el docente accede al panel, visualiza todos los resultados con indicadores.
+- **US-11: Cierre de Calificaciones y Auditoría (3 SP):** Como Docente quiero registrar defensas, ajustar nota y dejar constancia para mantener control final. *CA:* Dado un estudiante con datos de evaluación, cuando el docente accede al cierre, confirma la nota y la acción queda registrada en el AuditLog.
 
-| Método | Ruta | Descripción | Payload / Parámetros | Respuesta |
-|---|---|---|---|---|
-| `POST` | `/api/auth/login` | Login docente y emisión JWT | `{correo, password}` | `{token, user}` |
-| `POST` | `/api/students/upload-csv` | Importación masiva de alumnos | `FormData(file: .csv, course_id)` | `{creados, ignorados, total}` |
-| `POST` | `/api/reports/bulk-upload` | Subida en lote de informes PDF | `FormData(files: [.pdf], course_id)` | `{procesados: [{id, name, status}]}` |
-| `POST` | `/api/reports/{id}/analyze` | Dispara worker de análisis IA | Ninguno | `{message: "Encolado", status: "processing"}` |
-| `GET` | `/api/reports/{id}/questions` | Obtiene pool de 20 preguntas | Ninguno | `{questions: [QuestionSchema]}` |
-| `PUT` | `/api/reports/{id}/questions` | Edita o aprueba set de 10 | `{selected_ids: [int], custom: [...]}` | `{status: "approved", count: 10}` |
-| `POST` | `/api/flash/send-token` | Despacha email con enlace | `{report_id: int}` | `{sent: true, token, expires_at}` |
-| `GET` | `/api/flash/validate/{token}` | Valida vigencia y estado | Token en ruta | `{valid: true, student, test_status}` |
-| `WS` | `/ws/flash/{token}` | Sala interactiva del Flash Test | Query `?token=...` | Flujo de preguntas, temporizador y envío de respuestas |
-| `POST` | `/api/appointments/close` | Cierra cita y ajusta nota final | `{appointment_id, nota_final, acuerdos}` | `{status: "closed", audit_id}` |
+---
 
-### 5.2 Protocolo WebSocket del Flash Test (`/ws/flash/{token}`)
+### 4.3 Matriz de Alineación Backlog-Objetivos (Sección 4.4)
+
+| Objetivo | Historias Asociadas | Tareas Técnicas Clave | Criterios de Aceptación |
+|---|---|---|---|
+| **OE1** | US-01, US-02, US-03, US-04 | Modelos SQLAlchemy, endpoints CRUD, parser CSV, procesamiento asíncrono, `pymupdf4llm`. | CA-001, CA-002, CA-003, CA-004 |
+| **OE2** | US-05, US-06 | API Anthropic, prompt design, procesamiento asíncrono, Mock Engine Heurístico. | CA-005, CA-006 |
+| **OE3** | US-07, US-08 | Generación de preguntas, interfaz de edición, Gmail SMTP, tokens UUIDv4. | CA-007, CA-008 |
+| **OE4** | US-09, US-10, US-11 | WebSockets, interfaz reactiva, temporizador 60s, panel de resultados con filtros, panel de cierre, confirmación/modificación de nota, AuditLog inmutable. | CA-009, CA-010, CA-011 |
+
+---
+
+## 5. Anexo A: Estructura JSON de Evaluación (RF-007)
 
 ```json
-// Evento 1: Servidor -> Cliente (Inicio de pregunta)
 {
-  "type": "question_start",
-  "data": {
-    "index": 1,
-    "total": 10,
-    "enunciado": "¿Qué patrón arquitectónico se implementó en el módulo de autenticación?",
-    "alternativas": {
-      "A": "Session-based con cookies seguras",
-      "B": "Tokens UUIDv4 efímeros con expiración temporal",
-      "C": "OAuth 2.0 PKCE descentralizado",
-      "D": "Basic Auth sobre HTTPS"
-    },
-    "duration_seconds": 60
+  "porcentaje_logro": "65%",
+  "feedback": {
+    "fortalezas": ["Buena estructura", "Argumentos sólidos en sección 2"],
+    "debilidades": ["Falta profundidad en metodología", "Citas incompletas"],
+    "recomendaciones": ["Ampliar sección de resultados", "Revisar formato APA"]
+  },
+  "deteccion_ia": {
+    "porcentaje": "45%",
+    "nivel_confianza": "medio",
+    "secciones_sospechosas": ["Introducción", "Conclusiones"],
+    "justificacion": "Estilo uniforme, falta de variabilidad léxica"
+  },
+  "desglose_rubrica": {
+    "contenido": "60%",
+    "estructura": "70%",
+    "ortografia": "65%"
+  },
+  "evaluacion_respuestas": {
+    "nivel_rigor_aplicado": "medium",
+    "porcentaje_coherencia": "70%",
+    "respuestas_correctas": "7/10",
+    "preguntas_falladas": [
+      "P3: Explicar metodología utilizada",
+      "P8: Justificar elección de muestra"
+    ],
+    "observacion_ia": "El estudiante demuestra comprensión parcial del contenido. Se recomienda interrogación oral focalizada.",
+    "requiere_defensa_oral": true
   }
 }
-
-// Evento 2: Cliente -> Servidor (Respuesta del alumno)
-{
-  "type": "submit_answer",
-  "data": {
-    "question_index": 1,
-    "selected_option": "B",
-    "client_timestamp": "2026-09-24T14:30:15Z"
-  }
-}
-
-// Evento 3: Servidor -> Cliente (Resultado y cierre de sesión)
-{
-  "type": "test_completed",
-  "data": {
-    "score": 80.0,
-    "correct_count": 8,
-    "total_questions": 10,
-    "routed_to_interview": false,
-    "message": "Evaluación completada con éxito. Resultados registrados."
-  }
-}
-```
-
----
-
-## 6. Arquitectura Frontend
-
-- **Server Components (SSR):** Landing institucional, vistas estáticas informativas y validación preliminar de rutas protegidas.
-- **Client Components (`'use client'`):**
-  - `TeacherDashboard`: Panel integrado con 9 submódulos (Cursos, Estudiantes, Rúbrica, Materiales, Subida Masiva, Pool de Preguntas, Calificaciones, Agenda y Disponibilidad).
-  - `FlashSessionRunner`: Componente de alta reactividad con WebSocket, animador de temporizador y bloqueo de copiar/pegar para asegurar integridad.
-- **Gestión de Estado:** `Zustand` para el estado global del panel docente y `React Query / SWR` para revalidación asíncrona de reportes y estado de análisis en tiempo real.
-
----
-
-## 7. Sistema de Diseño (Design System)
-
-- **Paleta de Colores Corporativa:**
-  - `Primary:` Azul Royal (`#2563EB`) — Identidad y acciones primarias.
-  - `Secondary:` Índigo Profundo (`#4338CA`) — Encabezados y bloques estructurales.
-  - `Dark BG:` Pizarra Oscura (`#0F172A`) — Fondo de alto contraste en modo oscuro.
-  - `Success:` Verde Esmeralda (`#10B981`) — Calificaciones aprobatorias y validaciones exitosas.
-  - `Warning / Alert:` Ámbar (`#F59E0B`) y Carmesí (`#EF4444`) — Detección crítica de IA y alertas de citas.
-- **Tipografía:** `Inter` / `Geist Sans` para interfaces limpias y legibilidad en documentos densos; `JetBrains Mono` para visualización de fragmentos Markdown y JSON.
-
----
-
-## 8. Autenticación y Control de Accesos (RBAC)
-
-1. **Docentes y Ayudantes:**
-   - Autenticación con correo y contraseña protegida con `bcrypt` (factor de costo $\ge 12$).
-   - Tokens de sesión JWT firmados con algoritmo HS256 y expiración a 8 horas.
-   - Restricción de permisos: Los ayudantes pueden cargar informes y ver notas preliminares; solo el docente titular puede modificar pautas y ratificar actas de cierre.
-2. **Estudiantes (Paradigma Zero-Password):**
-   - No requieren cuenta ni contraseña en la plataforma.
-   - El acceso es conferido mediante tokens criptográficos UUIDv4 enviados exclusivamente a su correo oficial.
-   - El token es de **un solo uso** e intransferible; expira a las 48 horas de su emisión o inmediatamente al completar la prueba.
-
----
-
-## 9. Decisión de Hosting (Mapeo al Home Lab Innovares)
-
-| Servicio / Componente | Destino de Hosting | Justificación Técnica y Operativa |
-|---|---|---|
-| **Frontend Next.js** | **Vercel** | Edge network global, renderizado serverless, certificados SSL automáticos y cero costo operativo para el front público. |
-| **API REST & WebSockets (FastAPI)** | **GMKtec M5 Ultra** (Ryzen 7 7730U, 16GB) | Nodo headless 24/7 de alta eficiencia energética; maneja la concurrencia de WebSockets y workers de extracción asíncrona. |
-| **Base de Datos & AuditLog** | **Supabase** (Postgres Cloud) / **NAS UGREEN DXP4800** (Docker Postgres) | Persistencia ACID transaccional; para pruebas de desarrollo local opera sobre SQLite embebido y escala a Postgres en el NAS/Supabase. |
-| **Exposición Pública Segura** | **Cloudflare Tunnel** (Nombrado) | Expone el backend auto-hospedado en el GMKtec M5 con URL pública fija HTTPS sin abrir puertos en el router (`api.integrieval.innovares.cl`). |
-| **Inferencia IA Pesada / Local** | **Estación i9-14900KF + RTX 5070** / **API Anthropic** | Permite ejecutar modelos locales (Llama 3 / Qwen 2.5 vía Ollama) con aceleración GPU para pruebas locales con costo cero de API. |
-
----
-
-## 10. Orden de Construcción (Guía para Claude Code)
-
-```
-Paso 1: Setup del Repositorio y Entorno Base
-  ├── 1.1 Configurar backend con FastAPI, Pydantic v2 y SQLAlchemy 2.0.
-  └── 1.2 Configurar frontend Next.js 15 con Tailwind CSS v4 y shadcn/ui.
-
-Paso 2: Modelado de Datos y Gestión Académica (Sprint 1)
-  ├── 2.1 Crear modelos: Usuario, Asignatura, Estudiante, Material, Trabajo, Evaluacion.
-  ├── 2.2 Implementar parser de nóminas CSV UTF-8 BOM con deduplicación.
-  └── 2.3 Implementar carga masiva de PDFs y extracción a Markdown con pymupdf4llm.
-
-Paso 3: Motor de Análisis Contextual e Inferencia IA (Sprint 2)
-  ├── 3.1 Diseñar prompts que inyecten pauta + syllabus en contexto de Claude 3.5 Sonnet.
-  ├── 3.2 Implementar worker asíncrono en FastAPI con almacenamiento de nota, feedback y % IA.
-  └── 3.3 Desarrollar Mock Engine con generador heurístico para fallback offline.
-
-Paso 4: Pool de Reactivos y Despacho Tokenizado (Sprint 3)
-  ├── 4.1 Generar pool de 20 preguntas basadas exclusivamente en el texto del informe.
-  ├── 4.2 Construir editor interactivo en Next.js con validación obligatoria de 10 reactivos.
-  └── 4.3 Implementar servicio Gmail SMTP asíncrono con generación de tokens UUIDv4 (48h).
-
-Paso 5: Sala de Examen en Tiempo Real y Ruteo Automático (Sprint 4)
-  ├── 5.1 Construir servidor WebSocket con cronómetro estricto de 60s por pregunta.
-  ├── 5.2 Implementar frontend de examen /flash/[token] con manejo de reconexión.
-  └── 5.3 Programar lógica de ruteo automático: citación a cita si score < 50%, >= 95% o 10% aleatorio.
-
-Paso 6: Panel de Cierre, Auditoría y Validaciones Finales (Sprint 4)
-  ├── 6.1 Construir panel de actas finales con confirmación explícita docente de notas.
-  ├── 6.2 Implementar AuditLog inmutable en base de datos.
-  └── 6.3 Ejecutar suite de pruebas unitarias, de carga (100 WS) y generar documentación técnica.
-```
-
----
-
-## 11. Setup del Entorno y Variables de Configuración
-
-### Backend (`backend/.env`)
-```bash
-# Servidor & Entorno
-ENVIRONMENT=development
-PORT=8000
-SECRET_KEY=clave_secreta_jwt_para_firmar_tokens_docentes_super_segura
-DATABASE_URL=sqlite:///./integrieval.db
-# Para Postgres: postgresql://postgres:password@localhost:5432/integrieval
-
-# Proveedor de IA
-ANTHROPIC_API_KEY=sk-ant-api03-...
-AI_MODEL=claude-3-5-sonnet-20241022
-USE_MOCK_AI=false
-
-# Servicio de Correo SMTP (Gmail App Password)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=notificaciones.integrieval@gmail.com
-SMTP_PASSWORD=xxxx_xxxx_xxxx_xxxx
-FRONTEND_URL=http://localhost:3000
-```
-
-### Frontend (`frontend/.env.local`)
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_WS_URL=ws://localhost:8000
-```
-
----
-
-## 12. Dependencias Principales
-
-### Backend (`requirements.txt`)
-- `fastapi>=0.115.0`: Core de API web asíncrona.
-- `uvicorn[standard]>=0.30.0`: Servidor ASGI de alto rendimiento.
-- `sqlalchemy>=2.0.0`: ORM relacional y capa de abstracción de base de datos.
-- `pydantic>=2.8.0`: Validación y tipado de datos.
-- `pymupdf4llm>=0.0.17`: Extracción semántica de documentos a Markdown estructurado.
-- `anthropic>=0.34.0`: SDK oficial para inferencia con modelos Claude.
-- `aiosmtplib>=3.0.0`: Cliente SMTP asíncrono para envío de correos sin bloqueo de red.
-- `python-jose[cryptography]`: Generación y validación de tokens JWT.
-- `passlib[bcrypt]`: Hashing de contraseñas de docentes.
-- `python-docx` y `reportlab`: Generación programática de informes en Word y PDF.
-
-### Frontend (`package.json`)
-- `next@15.0.0`: Framework React con App Router y Server Actions.
-- `react@19.0.0` y `react-dom@19.0.0`: Biblioteca de interfaz de usuario.
-- `tailwindcss@4.0.0`: Utilidades CSS atómicas para estilizado.
-- `lucide-react`: Iconografía SVG modular.
-- `framer-motion`: Animaciones fluidas para transiciones y temporizadores.
-- `canvas-confetti`: Retroalimentación visual al finalizar el examen.
-
----
-
-## 13. Estrategia de Testing y Verificación
-
-1. **Pruebas Unitarias & de Integración (Pytest):**
-   - Validación del parser CSV ante archivos con codificación UTF-8, UTF-8 BOM y delimitadores `;` o `,`.
-   - Test del extractor `pymupdf4llm` frente a PDFs con encabezados jerárquicos y tablas complejas.
-   - Test de generación de reactivos asegurando que contengan alternativas A, B, C y D válidas.
-2. **Pruebas de Carga y Concurrencia (WebSockets):**
-   - Script de prueba concurrente simulando 100 estudiantes rindiendo la prueba flash en simultáneo con latencia $< 50\text{ms}$.
-3. **Pruebas de Resiliencia y Fallback:**
-   - Corte forzado de API de Anthropic para validar activación instantánea del `MockEngine` sin degradar el flujo docente.
-
----
-
-## 14. Checklist de Prelanzamiento (Estándar Innovares P0 / P1 / P2)
-
-### 🔴 P0: Bloqueantes para Puesta en Marcha
-- [x] **P0-1:** Hashing seguro `bcrypt` implementado para todos los accesos docentes y administrativos.
-- [x] **P0-2:** Expiración estricta de 48 horas y consumo de un solo uso para todos los tokens de Flash Test.
-- [x] **P0-3:** Validación server-side del temporizador de 60 segundos por pregunta para prevenir manipulaciones en el cliente.
-- [x] **P0-4:** Persistencia inmutable en `AuditLog` para cualquier modificación manual de notas.
-
-### 🟡 P1: Requerimientos Importantes de Operación
-- [x] **P1-1:** Activación automática del Mock Engine ante caídas de la API de Anthropic.
-- [x] **P1-2:** Reconexión automática de WebSocket preservando el cronómetro activo ante pérdidas de señal de internet.
-- [x] **P1-3:** Sanitización estricta de archivos CSV subidos para prevenir inyecciones de fórmulas (*CSV Formula Injection*).
-- [x] **P1-4:** Diseño responsivo accesible según pautas WCAG 2.1 nivel AA.
-
-### 🟢 P2: Mejoras Deseables de Continuidad
-- [ ] **P2-1:** Integración directa mediante LTI con LMS Moodle / Canvas para sincronización directa de actas.
-- [ ] **P2-2:** Exportación de reportes de auditoría en formato Excel / PDF para decanaturas.
-
----
-
-## 15. Reglas No Negociables y CLAUDE.md del Proyecto
-
-```markdown
-# Reglas de Construcción para IntegriEval
-
-1. **Paradigma Human-in-the-Loop:** La IA nunca publica una nota final de forma autónoma. El docente siempre mantiene el control y debe confirmar explícitamente el cierre de calificaciones.
-2. **Cero Cuentas para Alumnos:** Los estudiantes NUNCA crean cuentas con contraseñas en la plataforma. Todo su ciclo de acceso es mediante enlace tokenizado de un solo uso despachado al correo institucional.
-3. **Persistencia Inmutable:** Toda modificación de nota preliminar debe registrarse en la tabla `audit_logs` con el ID del usuario, fecha, valor anterior y justificación.
-4. **Resiliencia ante Fallos de IA:** Ningún endpoint HTTP debe fallar si la API externa de IA está inaccesible; se debe activar de forma transparente el Mock Engine.
-5. **Idioma:** Toda la interfaz de usuario, mensajes de error, plantillas de correo y documentación técnica deben estar en español neutro chileno.
 ```
