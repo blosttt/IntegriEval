@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cuestionarios UCT — IntegriEval</title>
+  <script>
+    if (!localStorage.getItem("token")) {
+      window.location.replace("/login");
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -256,89 +261,8 @@
 <div id="toast-container"></div>
 
 <!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- LOGIN SCREEN (Cuestionarios UCT Exact Aesthetic)                      -->
+<!-- PORTAL DOCENTE — CUESTIONARIOS UCT                                     -->
 <!-- ══════════════════════════════════════════════════════════════════════ -->
-<div id="loginScreen" class="uct-login-page" style="display:flex;">
-  <!-- Brand logo header -->
-  <div class="uct-brand-header">
-    <span class="uct-emblem"></span>
-    <span class="uct-brand-title">Cuestionarios UCT</span>
-  </div>
-
-  <!-- Central Login Card -->
-  <div class="uct-login-card">
-    <h1 class="uct-card-title">Inicia sesión con tu cuenta institucional</h1>
-
-    <!-- Action 1: Entrar como profesor (Acceso Inmediato 1-Click) -->
-    <button type="button" class="uct-auth-btn uct-btn-prof" onclick="loginAsDocente()" id="btnProfPrimary">
-      <span>Entrar como profesor</span>
-    </button>
-
-    <!-- Action 2: Entrar como alumno (Modal Flash Test) -->
-    <button type="button" class="uct-auth-btn uct-btn-alum" onclick="openStudentDialog()" id="btnAlumPrimary">
-      <span>Entrar como alumno</span>
-    </button>
-
-    <!-- Accordion: Otras opciones de ingreso (Admin / Ayudante / Manual) -->
-    <div style="margin-top:0.6rem;margin-bottom:0.25rem;">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="toggleManualLogin()" style="color:#64748b;font-size:0.75rem;width:100%;justify-content:center;">
-        <span>Otras opciones (Admin, Ayudante, Credenciales)</span> <span id="manualToggleArrow" style="font-size:0.7rem;">▼</span>
-      </button>
-
-      <div id="manualOptionsBox" style="display:none;margin-top:0.75rem;padding:0.85rem;background:#131c2b;border:1px solid #1f2d42;border-radius:10px;text-align:left;">
-        <p class="text-xs text-muted mb-2" style="font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:0.68rem;">Accesos directos por rol:</p>
-        <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.85rem;">
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginAsAdmin()">
-            <span>⚙️</span>
-            <div>
-              <div style="font-weight:600;font-size:0.76rem;">Administrador Sistema</div>
-              <div class="text-xs text-muted">admin@universidad.cl</div>
-            </div>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginAsAyudante()">
-            <span>🤝</span>
-            <div>
-              <div style="font-weight:600;font-size:0.76rem;">Ana Ayudante González</div>
-              <div class="text-xs text-muted">ayudante@universidad.cl</div>
-            </div>
-          </button>
-        </div>
-
-        <p class="text-xs text-muted mb-2" style="font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:0.68rem;border-top:1px solid #1e3048;padding-top:0.5rem;">Ingreso manual:</p>
-        <div id="loginError" class="callout callout-red mb-2" style="display:none;padding:0.4rem 0.6rem;font-size:0.75rem;">
-          <span id="loginErrorMsg">Credenciales incorrectas.</span>
-        </div>
-        <form onsubmit="handleLogin(event)">
-          <div class="form-group mb-2">
-            <label class="form-label text-xs">Correo</label>
-            <input type="email" id="loginEmail" class="form-input text-xs" placeholder="nombre@universidad.cl" required>
-          </div>
-          <div class="form-group mb-2">
-            <label class="form-label text-xs">Contraseña</label>
-            <input type="password" id="loginPassword" class="form-input text-xs" placeholder="••••••••" required>
-          </div>
-          <button type="submit" id="loginBtn" class="btn btn-primary btn-sm w-full">Ingresar</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Google guarantee footer with clamped SVG -->
-    <div class="uct-guarantee">
-      <span>Seguridad y privacidad garantizadas por</span>
-      <svg class="google-icon-svg" viewBox="0 0 24 24" width="16" height="16" style="width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;min-height:16px!important;max-height:16px!important;display:inline-block!important;vertical-align:middle;flex-shrink:0!important;">
-        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.665-5.17 3.665-9.12z"/>
-        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.26 21.36 7.33 24 12 24z"/>
-        <path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.13z"/>
-        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/>
-      </svg>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- MAIN APP (Cuestionarios UCT & Guided Workflow)                         -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div id="mainApp" style="display:none;">
 
   <!-- ── Header (Matching Screenshot 2) ────────────────────────────────── -->
   <header class="app-header">
@@ -388,15 +312,27 @@
     </div>
   </header>
 
-  <!-- ── UCT Hero Section (Matching Screenshot 2) ─────────────────────── -->
-  <section class="uct-hero-section">
-    <h1 class="uct-hero-title">Crea, administra y revisa<br>evaluaciones</h1>
-    <p class="uct-hero-sub">Conoce la nueva forma de evaluar en esta era de inteligencia artificial.</p>
-    <div class="uct-hero-actions">
-      <button class="btn-portal-blue" onclick="scrollToWorkflow()">Portal del Docente</button>
-      <button class="btn-portal-dark" onclick="openStudentDialog()">Portal del Alumno</button>
+  <!-- ── Dashboard Title & Quick Actions ─────────────────────────────── -->
+  <div class="container" style="padding-top:1.5rem;padding-bottom:0.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <h1 style="font-size:1.65rem;font-weight:800;letter-spacing:-0.03em;color:var(--text);margin-bottom:0.25rem;">
+          Crea, administra y revisa evaluaciones
+        </h1>
+        <p style="font-size:0.85rem;color:var(--text-muted);">
+          Plataforma de evaluación continua, integridad académica y verificación oral flash.
+        </p>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-primary" onclick="switchTab('nomina')" style="padding:0.5rem 1rem;font-size:0.82rem;">
+          <span>＋</span> Nueva Evaluación (Paso 1)
+        </button>
+        <button class="btn btn-secondary" onclick="switchTab('panel')" style="padding:0.5rem 1rem;font-size:0.82rem;">
+          <span>📊</span> Ver Panel en Vivo
+        </button>
+      </div>
     </div>
-  </section>
+  </div>
 
   <!-- ── Interactive Guided Workflow Stepper ──────────────────────────── -->
   <div class="container" id="workflowGuideAnchor" style="padding-bottom:0.75rem;">

@@ -69,35 +69,22 @@ function toggleTheme() {
 /* ── Init ───────────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", async () => {
   initTheme();
-  if (currentToken) {
-    await checkAuth();
-  } else {
-    showLogin();
+  if (!currentToken) {
+    window.location.replace("/login");
+    return;
   }
+  await checkAuth();
 });
-
-function showLogin()  {
-  const login = document.getElementById("loginScreen");
-  const app = document.getElementById("mainApp");
-  if (login) login.style.display = "flex";
-  if (app) app.style.display = "none";
-}
-
-function showApp() {
-  const login = document.getElementById("loginScreen");
-  const app = document.getElementById("mainApp");
-  if (login) login.style.display = "none";
-  if (app) app.style.display = "block";
-}
 
 /* ── Auth ───────────────────────────────────────────────────────────── */
 async function checkAuth() {
   try {
     currentUser = await apiCall("/api/auth/me");
     applyUserUI();
-    showApp();
     await loadCourses();
-  } catch { showLogin(); }
+  } catch {
+    logout();
+  }
 }
 
 function applyUserUI() {
@@ -227,8 +214,9 @@ function logout() {
   currentToken = null;
   localStorage.removeItem("token");
   if (teacherWS) { teacherWS.close(); teacherWS = null; }
-  currentUser = null; currentCourseId = null;
-  showLogin();
+  currentUser = null;
+  currentCourseId = null;
+  window.location.replace("/login");
 }
 
 /* ── Courses ─────────────────────────────────────────────────────────  */

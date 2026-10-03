@@ -129,7 +129,17 @@ os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.get("/login", response_class=HTMLResponse)
+async def serve_login():
+    login_file = TEMPLATES_DIR / "login.html"
+    if login_file.exists():
+        with open(login_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h1>Login</h1>")
+
 @app.get("/", response_class=HTMLResponse)
+@app.get("/docente", response_class=HTMLResponse)
+@app.get("/panel", response_class=HTMLResponse)
 async def serve_teacher_dashboard():
     index_file = TEMPLATES_DIR / "index.html"
     if index_file.exists():
