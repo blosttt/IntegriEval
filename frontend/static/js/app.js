@@ -100,27 +100,67 @@ function applyUserUI() {
   if (!currentUser) return;
   const nameEl = document.getElementById("userDisplay");
   const avatarEl = document.getElementById("userAvatarText");
-  const dotEl = document.getElementById("userRoleDot");
-  if (nameEl) nameEl.textContent = currentUser.nombre;
+  const roleBadge = document.getElementById("userRoleBadge");
+
+  if (nameEl) nameEl.textContent = (currentUser.nombre || "Docente").toUpperCase();
   if (avatarEl) {
-    const parts = currentUser.nombre.split(" ");
+    const parts = (currentUser.nombre || "Docente").split(" ");
     avatarEl.textContent = (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
   }
-  // Role dot color
-  const roleColors = { admin: "var(--brand-purple)", docente: "var(--success)", ayudante: "var(--info)" };
-  if (dotEl) dotEl.style.background = roleColors[currentUser.rol] || "var(--success)";
+
+  // Role badge exact style (Screenshot 2: gold Administrador)
+  if (roleBadge) {
+    if (currentUser.rol === "admin") {
+      roleBadge.className = "role-badge-gold";
+      roleBadge.textContent = "Administrador";
+    } else if (currentUser.rol === "ayudante") {
+      roleBadge.className = "role-badge-blue";
+      roleBadge.textContent = "Ayudante";
+    } else {
+      roleBadge.className = "role-badge-green";
+      roleBadge.textContent = "Docente";
+    }
+  }
+}
+
+/* ── UCT UI & Guided Workflow Helpers ──────────────────────────────────── */
+function toggleProfLogin() {
+  const box = document.getElementById("profOptionsBox");
+  if (!box) return;
+  const isHidden = box.style.display === "none";
+  box.style.display = isHidden ? "block" : "none";
+  const btn = document.getElementById("btnProfToggle");
+  if (btn) btn.style.borderColor = isHidden ? "var(--brand-blue)" : "";
+}
+
+function openStudentDialog() {
+  const m = document.getElementById("studentDialogModal");
+  if (m) m.style.display = "flex";
+}
+
+function goToManualStudentTest() {
+  const token = document.getElementById("manualStudentToken")?.value?.trim();
+  if (!token) {
+    showToast("Aviso", "Por favor ingresa un token válido de Flash Test.", "info");
+    return;
+  }
+  window.open(`/test/${token}`, "_blank");
+}
+
+function scrollToWorkflow() {
+  switchTab("panel");
+  const el = document.getElementById("workflowGuideAnchor");
+  if (el) el.scrollIntoView({ behavior: "smooth" });
 }
 
 /* Demo quick-fill */
 function fillDemo(email, password) {
   document.getElementById("loginEmail").value    = email;
   document.getElementById("loginPassword").value = password;
-  // Highlight the selected card
-  document.querySelectorAll(".demo-card").forEach(c =>
-    c.classList.toggle("selected", c.dataset.email === email));
   // Auto-submit
   handleLogin({ preventDefault: () => {} });
 }
+
 
 async function handleLogin(e) {
   e.preventDefault();
@@ -222,6 +262,23 @@ function switchTab(tabId) {
     if (el) el.style.display = (t === tabId) ? "" : "none";
   });
 
+  // Highlight current step in the workflow guide
+  const stepMap = {
+    nomina:     "wfStep1",
+    materiales: "wfStep2",
+    evaluacion: "wfStep3",
+    preguntas:  "wfStep4",
+    panel:      "wfStep5"
+  };
+  [1, 2, 3, 4, 5].forEach(num => {
+    const card = document.getElementById(`wfStep${num}`);
+    if (card) card.classList.remove("active");
+  });
+  if (stepMap[tabId]) {
+    const activeCard = document.getElementById(stepMap[tabId]);
+    if (activeCard) activeCard.classList.add("active");
+  }
+
   const loaders = {
     panel:      loadPanel,
     nomina:     loadNomina,
@@ -248,10 +305,70 @@ async function loadPanel() {
     setStatVal("statNotasCerradas",   panelData.notas_cerradas);
 
     renderPanelTable(panelData.estudiantes);
+    updateWorkflowGuide(panelData);
   } catch (err) {
     showToast("Error cargando panel", err.message, "error");
   }
 }
+
+function updateWorkflowGuide(data) {
+  if (!data) return;
+  // Step 1: Nomina
+  const b1 = document.getElementById("wfBadge1");
+  if (b1) {
+    if (data.total_alumnos > 0) {
+      b1.className = "wf-step-badge wf-badge-done";
+      b1.textContent = `✓ ${data.total_alumnos} inscritos`;
+    } else {
+      b1.className = "wf-step-badge wf-badge-pending";
+      b1.textContent = "0 inscritos";
+    }
+  }
+
+  // Step 2: Materiales
+  const b2 = document.getElementById("wfBadge2");
+  if (b2) {
+    b2.className = "wf-step-badge wf-badge-done";
+    b2.textContent = "✓ Syllabus activo";
+  }
+
+  // Step 3: Informes
+  const b3 = document.getElementById("wfBadge3");
+  if (b3) {
+    if (data.analizados > 0) {
+      b3.className = "wf-step-badge wf-badge-done";
+      b3.textContent = `✓ ${data.analizados} analizados`;
+    } else {
+      b3.className = "wf-step-badge wf-badge-pending";
+      b3.textContent = "0 analizados";
+    }
+  }
+
+  // Step 4: Flash Tests
+  const b4 = document.getElementById("wfBadge4");
+  if (b4) {
+    if (data.tests_completados > 0) {
+      b4.className = "wf-step-badge wf-badge-done";
+      b4.textContent = `✓ ${data.tests_completados} respondidos`;
+    } else {
+      b4.className = "wf-step-badge wf-badge-pending";
+      b4.textContent = "0 despachados";
+    }
+  }
+
+  // Step 5: Panel & % Logro
+  const b5 = document.getElementById("wfBadge5");
+  if (b5) {
+    if (data.notas_cerradas > 0) {
+      b5.className = "wf-step-badge wf-badge-done";
+      b5.textContent = `✓ ${data.notas_cerradas} confirmados`;
+    } else {
+      b5.className = "wf-step-badge wf-badge-active";
+      b5.textContent = "Monitoreo activo";
+    }
+  }
+}
+
 
 function setStatVal(id, val) {
   const el = document.getElementById(id);
