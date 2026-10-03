@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IntegriEval — Evaluación Auténtica e Integridad Académica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    /* ── Login screen ─────────────────────────────────────────────────── */
+    .login-root {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 480px;
+    }
+
+    @media (max-width: 900px) {
+      .login-root { grid-template-columns: 1fr; }
+      .login-hero  { display: none; }
+    }
+
+    /* Hero panel */
+    .login-hero {
+      background: linear-gradient(155deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .login-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -100px; left: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: white;
+      box-shadow: 0 0 20px rgba(99,102,241,0.4);
+    }
+
+    .hero-brand-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .hero-brand-sub {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.03em;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-headline {
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .hero-headline span {
+      background: linear-gradient(90deg, #818cf8, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.7;
+      margin-bottom: 2rem;
+      max-width: 380px;
+    }
+
+    .hero-features {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .hero-feat {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.65);
+    }
+
+    .hero-feat-dot {
+      width: 20px; height: 20px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+
+    .hero-feat-dot.blue   { background: rgba(99,102,241,0.3);  color: #a5b4fc; }
+    .hero-feat-dot.green  { background: rgba(16,185,129,0.3);  color: #6ee7b7; }
+    .hero-feat-dot.amber  { background: rgba(245,158,11,0.3);  color: #fcd34d; }
+    .hero-feat-dot.purple { background: rgba(139,92,246,0.3);  color: #c4b5fd; }
+
+    .hero-footer {
+      position: relative;
+      z-index: 1;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* Login form panel */
+    .login-form-panel {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2.5rem;
+      min-height: 100vh;
+    }
+
+    .login-form-inner {
+      max-width: 360px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .login-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.25rem;
+    }
+
+    .login-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    /* Demo credential cards */
+    .demo-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .demo-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.7rem 0.875rem;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: all var(--dur) var(--ease);
+      text-align: left;
+      width: 100%;
+    }
+
+    .demo-card:hover {
+      border-color: var(--brand-blue);
+      background: var(--brand-blue-light);
+      transform: translateX(3px);
+    }
+
+    .demo-card.selected {
+      border-color: var(--brand-blue);
+      background: var(--brand-blue-light);
+    }
+
+    .demo-avatar {
+      width: 34px; height: 34px;
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .demo-avatar.docente  { background: #dbeafe; }
+    .demo-avatar.admin    { background: #ede9fe; }
+    .demo-avatar.ayudante { background: #d1fae5; }
+    .demo-avatar.student  { background: #fef3c7; }
+
+    .demo-info { flex: 1; min-width: 0; }
+
+    .demo-role {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .demo-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .demo-email {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .demo-arrow {
+      font-size: 0.8rem;
+      color: var(--text-subtle);
+      transition: transform var(--dur) var(--ease);
+    }
+
+    .demo-card:hover .demo-arrow { transform: translateX(3px); color: var(--brand-blue); }
+
+    /* Divider */
+    .divider-text {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+      font-size: 0.72rem;
+      color: var(--text-subtle);
+      font-weight: 500;
+    }
+
+    .divider-text::before,
+    .divider-text::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Login error */
+    .login-error {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 0.875rem;
+      background: var(--danger-light);
+      border: 1px solid var(--danger);
+      border-radius: var(--r-md);
+      font-size: 0.8rem;
+      color: var(--danger-dark);
+      margin-bottom: 1rem;
+    }
+
+    /* Student note */
+    .student-note {
+      margin-top: 1.5rem;
+      padding: 0.875rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .student-note strong { color: var(--text); }
+
+    /* Theme toggle on login */
+    .login-theme-btn {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 10;
+    }
+
+    /* ── Main App Styles ──────────────────────────────────────────────── */
+
+    /* Row action buttons compact */
+    .row-actions {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    /* Anexo A accordion */
+    .anexo-section {
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .anexo-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--surface-2);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      gap: 0.75rem;
+    }
+
+    .anexo-section-body {
+      padding: 1rem;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+
+    .feedback-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      padding: 0.375rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .feedback-item:last-child { border-bottom: none; }
+
+    /* Score ring on completed */
+    .score-ring-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 1.5rem 0;
+    }
+
+    /* Sidebar-style steps indicator */
+    .step-indicator {
+      display: flex;
+      gap: 0.375rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-pip {
+      height: 3px;
+      flex: 1;
+      background: var(--surface-3);
+      border-radius: var(--r-full);
+      transition: background 0.3s;
+    }
+
+    .step-pip.done    { background: var(--success);    }
+    .step-pip.active  { background: var(--brand-blue); }
+
+    /* Tooltip */
+    [data-tooltip] { position: relative; }
+
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: var(--surface);
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.25rem 0.6rem;
+      border-radius: var(--r-sm);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--dur) var(--ease);
+    }
+
+    [data-tooltip]:hover::after { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ── Toast Container ─────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- Theme Toggle (fixed) -->
+<button class="btn btn-secondary btn-sm login-theme-btn" onclick="toggleTheme()" data-tooltip="Cambiar tema">
+  <span id="theme-icon">🌙</span>
+</button>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- LOGIN SCREEN                                                          -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-root">
+
+    <!-- Left hero panel -->
+    <div class="login-hero">
+      <div class="hero-brand">
+        <div class="hero-logo">IE</div>
+        <div>
+          <div class="hero-brand-name">IntegriEval</div>
+          <div class="hero-brand-sub">INFO1197 · Septiembre 2026</div>
+        </div>
+      </div>
+
+      <div class="hero-content">
+        <h2 class="hero-headline">
+          Evaluación Auténtica<br>
+          <span>potenciada por IA</span>
+        </h2>
+        <p class="hero-desc">
+          Plataforma semi-automatizada para la verificación de integridad académica,
+          detección contextual de uso de IA y aplicación de tests flash en tiempo real
+          sin fricción para los estudiantes.
+        </p>
+        <div class="hero-features">
+          <div class="hero-feat">
+            <div class="hero-feat-dot blue">🔍</div>
+            <span>Análisis heurístico semántico de informes PDF con PyMuPDF</span>
+          </div>
+          <div class="hero-feat">
+            <div class="hero-feat-dot green">⚡</div>
+            <span>Flash Test en tiempo real por WebSocket — 60 segundos cronometrados</span>
+          </div>
+          <div class="hero-feat">
+            <div class="hero-feat-dot amber">🛡️</div>
+            <span>Auditoría inmutable y cumplimiento Ley N° 21.719 (Datos Chile)</span>
+          </div>
+          <div class="hero-feat">
+            <div class="hero-feat-dot purple">👤</div>
+            <span>Human-in-the-loop: el docente siempre tiene la última palabra</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        © 2026 IntegriEval — Proyecto de Título · Ingeniería Civil Informática
+      </div>
+    </div>
+
+    <!-- Right login form -->
+    <div class="login-form-panel">
+      <div class="login-form-inner">
+
+        <h1 class="login-title">Bienvenido de vuelta</h1>
+        <p class="login-subtitle">Accede con tu rol para gestionar evaluaciones y verificaciones.</p>
+
+        <!-- Demo credential cards -->
+        <p class="text-xs font-medium text-muted mb-4" style="text-transform:uppercase;letter-spacing:0.05em;">
+          ── Acceso rápido de demostración ──
+        </p>
+        <div class="demo-cards">
+          <button class="demo-card" onclick="fillDemo('docente@universidad.cl','Docente123!')" data-email="docente@universidad.cl">
+            <div class="demo-avatar docente">🎓</div>
+            <div class="demo-info">
+              <div class="demo-role">Docente</div>
+              <div class="demo-name">Prof. Sebastián Cisternas</div>
+              <div class="demo-email">docente@universidad.cl</div>
+            </div>
+            <div class="demo-arrow">→</div>
+          </button>
+          <button class="demo-card" onclick="fillDemo('admin@universidad.cl','Admin123!')" data-email="admin@universidad.cl">
+            <div class="demo-avatar admin">⚙️</div>
+            <div class="demo-info">
+              <div class="demo-role">Administrador</div>
+              <div class="demo-name">Administrador Sistema</div>
+              <div class="demo-email">admin@universidad.cl</div>
+            </div>
+            <div class="demo-arrow">→</div>
+          </button>
+          <button class="demo-card" onclick="fillDemo('ayudante@universidad.cl','Ayudante123!')" data-email="ayudante@universidad.cl">
+            <div class="demo-avatar ayudante">🤝</div>
+            <div class="demo-info">
+              <div class="demo-role">Ayudante</div>
+              <div class="demo-name">Ana Ayudante González</div>
+              <div class="demo-email">ayudante@universidad.cl</div>
+            </div>
+            <div class="demo-arrow">→</div>
+          </button>
+        </div>
+
+        <!-- Student note -->
+        <div class="student-note">
+          <span>👋</span>&nbsp;
+          <strong>Estudiante:</strong> No necesitas registrarte. Revisa tu correo y usa
+          el <strong>enlace personalizado</strong> de Flash Test que te envió tu docente.
+        </div>
+
+        <!-- Divider -->
+        <div class="divider-text">o ingresa tus credenciales manualmente</div>
+
+        <!-- Login form -->
+        <div id="loginError" class="login-error" style="display:none;">
+          <span>⚠</span>
+          <span id="loginErrorMsg">Credenciales incorrectas.</span>
+        </div>
+
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Correo electrónico</label>
+            <input type="email" id="loginEmail" class="form-input" placeholder="nombre@universidad.cl" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Contraseña</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
+          </div>
+          <button type="submit" id="loginBtn" class="btn btn-primary btn-lg w-full" style="margin-top:0.5rem;">
+            Iniciar sesión
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- MAIN APP                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div id="mainApp" style="display:none;">
+
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand-icon">IE</div>
+        <span class="brand-name">IntegriEval</span>
+        <span class="brand-badge">v1.0</span>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <!-- Course selector -->
+      <div class="course-select-wrap">
+        <span class="course-select-label">Asignatura:</span>
+        <select class="course-select" id="courseSelect" onchange="onCourseChange()">
+          <option>Cargando…</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="showNewCourseModal()" data-tooltip="Nueva asignatura">＋</button>
+      </div>
+
+      <!-- Right controls -->
+      <div class="header-actions">
+        <button class="btn btn-ghost btn-icon" onclick="toggleTheme()" data-tooltip="Tema">
+          <span id="headerThemeIcon">🌙</span>
+        </button>
+        <div class="header-divider"></div>
+        <!-- User chip -->
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatarText">DS</div>
+          <span class="user-name" id="userDisplay">Docente</span>
+          <span class="user-role-dot" id="userRoleDot"></span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Nav Tabs ─────────────────────────────────────────────────────── -->
+  <nav class="app-nav">
+    <div class="nav-inner">
+      <button class="nav-tab active" data-tab="panel" onclick="switchTab('panel')">
+        <span class="tab-icon">📊</span> Panel
+      </button>
+      <button class="nav-tab" data-tab="nomina" onclick="switchTab('nomina')">
+        <span class="tab-icon">👥</span> Nómina CSV
+      </button>
+      <button class="nav-tab" data-tab="materiales" onclick="switchTab('materiales')">
+        <span class="tab-icon">📚</span> Materiales
+      </button>
+      <button class="nav-tab" data-tab="evaluacion" onclick="switchTab('evaluacion')">
+        <span class="tab-icon">📄</span> Informes PDF
+      </button>
+      <button class="nav-tab" data-tab="preguntas" onclick="switchTab('preguntas')">
+        <span class="tab-icon">❓</span> Preguntas &amp; Despacho
+      </button>
+      <button class="nav-tab" data-tab="auditoria" onclick="switchTab('auditoria')">
+        <span class="tab-icon">🛡️</span> Auditoría
+      </button>
+      <button class="nav-tab" data-tab="config" onclick="switchTab('config')">
+        <span class="tab-icon">⚙️</span> Parámetros
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Content ──────────────────────────────────────────────────────── -->
+  <div class="container" style="padding-top:1.5rem;">
+
+    <!-- ══ TAB 1: Panel ════════════════════════════════════════════════ -->
+    <section id="tabContent_panel">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Panel de Resultados</h2>
+          <p class="page-subtitle">Monitoreo en tiempo real · toma de decisiones pedagógicas</p>
+        </div>
+        <div class="flex gap-2">
+          <select class="form-select" id="filterSelect" onchange="loadPanel()" style="width:auto;">
+            <option value="todos">Todos los estudiantes</option>
+            <option value="defensa">Requieren defensa oral</option>
+            <option value="alerta_ia">Alerta IA ≥ 40 %</option>
+            <option value="cerradas">Evaluaciones cerradas</option>
+          </select>
+          <button class="btn btn-primary" onclick="handleDispatchFlashTests()" id="dispatchBtn">
+            ⚡ Despachar Flash Tests
+          </button>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card c-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statTotalAlumnos">0</div>
+          <div class="stat-label">Total alumnos</div>
+        </div>
+        <div class="stat-card c-cyan">
+          <div class="stat-icon">📄</div>
+          <div class="stat-value" id="statAnalizados">0</div>
+          <div class="stat-label">Informes analizados</div>
+        </div>
+        <div class="stat-card c-red">
+          <div class="stat-icon">🤖</div>
+          <div class="stat-value" id="statAlertaIA">0</div>
+          <div class="stat-label">Alerta sospecha IA</div>
+        </div>
+        <div class="stat-card c-amber">
+          <div class="stat-icon">🎤</div>
+          <div class="stat-value" id="statReqDefensa">0</div>
+          <div class="stat-label">Requieren defensa</div>
+        </div>
+        <div class="stat-card c-green">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="statTestsCompletados">0</div>
+          <div class="stat-label">Flash tests OK</div>
+        </div>
+        <div class="stat-card c-purple">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="statNotasCerradas">0</div>
+          <div class="stat-label">Evaluaciones cerradas</div>
+        </div>
+      </div>
+
+      <!-- Results table -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Estudiantes · Decisiones Docentes</h3>
+          <span class="badge badge-blue" id="wsStatusBadge">● En vivo</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>% Logro</th>
+                <th>Detección IA</th>
+                <th>Flash Test</th>
+                <th>Decisión</th>
+                <th>Defensa oral</th>
+                <th style="width:160px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="panelTableBody">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-title">Cargando panel…</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 2: Nómina ═══════════════════════════════════════════════ -->
+    <section id="tabContent_nomina" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Nómina de Estudiantes</h2>
+          <p class="page-subtitle">Ingesta masiva por CSV · detección automática de duplicados</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Cargar Nómina CSV</h3>
+        </div>
+        <div class="card-body">
+          <div class="callout callout-blue mb-4">
+            <div class="callout-icon">ℹ️</div>
+            <div class="callout-content">
+              <div class="callout-title">Formato aceptado</div>
+              Columnas requeridas: <code>nombre</code>, <code>correo</code> (opcional: <code>rut</code>).
+              Delimitadores auto-detectados: coma <code>,</code> o punto y coma <code>;</code>.
+            </div>
+          </div>
+          <div class="dropzone" id="csvDropzone" onclick="document.getElementById('csvFileInput').click()">
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCSVUpload(this.files[0])">
+            <div class="dropzone-icon">📋</div>
+            <div class="dropzone-title">Arrastre el archivo .csv o haga clic aquí</div>
+            <div class="dropzone-sub">Máx. 2000 estudiantes por carga</div>
+          </div>
+          <div id="csvUploadStatus" style="margin-top:1rem;font-size:0.85rem;font-weight:600;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Estudiantes Matriculados</h3>
+          <span class="badge badge-gray" id="nominaCount">0 registros</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Nombre</th><th>Correo</th><th>RUT</th><th>Estado informe</th></tr>
+            </thead>
+            <tbody id="nominaTableBody">
+              <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Sin estudiantes cargados</div><div class="empty-sub">Sube el archivo CSV para registrar la nómina del curso</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 3: Materiales ════════════════════════════════════════════ -->
+    <section id="tabContent_materiales" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Materiales de Apoyo</h2>
+          <p class="page-subtitle">Syllabus, rúbricas y guías → contexto inyectado al motor de IA</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Subir Nuevo Material</h3></div>
+        <div class="card-body">
+          <form onsubmit="handleMaterialUpload(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Nombre del material</label>
+                <input type="text" id="materialNombre" class="form-input" placeholder="Ej: Pauta Proyecto Semestre 2" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo de documento</label>
+                <select id="materialTipo" class="form-select">
+                  <option value="syllabus">Syllabus / Programa</option>
+                  <option value="rubrica">Rúbrica de evaluación</option>
+                  <option value="guia">Guía de trabajo</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Archivo (.pdf, .md, .txt)</label>
+              <input type="file" id="materialFile" class="form-input" accept=".pdf,.md,.txt" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Subir y convertir a Markdown</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Materiales disponibles</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>Tipo</th><th>Caracteres extraídos</th><th>Acciones</th></tr></thead>
+            <tbody id="materialesTableBody">
+              <tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📚</div><div class="empty-title">Sin materiales cargados</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 4: Informes PDF ══════════════════════════════════════════ -->
+    <section id="tabContent_evaluacion" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Ingesta y Evaluación de Informes</h2>
+          <p class="page-subtitle">Extracción semántica PyMuPDF → análisis heurístico → Anexo A</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Individual -->
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Carga Individual</h3></div>
+          <div class="card-body">
+            <form onsubmit="handleSinglePDFUpload(event)">
+              <div class="form-group">
+                <label class="form-label">Estudiante</label>
+                <select id="singleUploadStudentSelect" class="form-select" required>
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Archivo PDF</label>
+                <input type="file" id="singlePDFFile" class="form-input" accept=".pdf" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-full">Procesar y Evaluar</button>
+              <div id="singlePDFStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Batch -->
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Carga Masiva (Batch)</h3></div>
+          <div class="card-body">
+            <p class="text-sm text-muted mb-4">
+              Asociación automática por nombre de archivo con la nómina cargada (RF-005).
+            </p>
+            <div class="dropzone" onclick="document.getElementById('batchPDFInput').click()">
+              <input type="file" id="batchPDFInput" accept=".pdf" multiple style="display:none;" onchange="handleBatchPDFUpload(this.files)">
+              <div class="dropzone-icon">📦</div>
+              <div class="dropzone-title">Arrastre múltiples PDFs aquí</div>
+              <div class="dropzone-sub">Se asociarán automáticamente por nombre / correo</div>
+            </div>
+            <div id="batchPDFStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 5: Preguntas y Despacho ══════════════════════════════════ -->
+    <section id="tabContent_preguntas" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Pool de Preguntas y Despacho Flash</h2>
+          <p class="page-subtitle">Edita, selecciona y despacha tokens UUIDv4 con vigencia 48 h</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <label class="form-label" style="margin:0;">Estudiante:</label>
+          <select id="poolStudentSelect" class="form-select" onchange="onPoolStudentChange()" style="width:240px;">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+      </div>
+      <div id="questionsPoolContainer">
+        <div class="empty-state">
+          <div class="empty-icon">❓</div>
+          <div class="empty-title">Selecciona un estudiante</div>
+          <div class="empty-sub">Se mostrará el pool de preguntas generadas a partir de su informe evaluado.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 6: Auditoría ═════════════════════════════════════════════ -->
+    <section id="tabContent_auditoria" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Auditoría Inmutable</h2>
+          <p class="page-subtitle">Trazabilidad de acciones · Cumplimiento Ley N° 21.719 (Chile)</p>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAuditoria()">↻ Actualizar</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Acción</th><th>Entidad</th><th>Usuario</th><th>Fecha y hora</th><th>Detalles</th></tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🛡️</div><div class="empty-title">Sin registros aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 7: Parámetros ════════════════════════════════════════════ -->
+    <section id="tabContent_config" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Parámetros de Evaluación</h2>
+          <p class="page-subtitle">Configuración pedagógica por asignatura · RF-003 / RN-003</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:720px;">
+        <div class="card-body">
+          <form onsubmit="handleSaveConfig(event)">
+            <div class="form-group">
+              <label class="form-label">Instrucciones adicionales al motor de IA</label>
+              <textarea id="configPrompt" class="form-textarea" rows="3"
+                placeholder="Ej: Enfocarse en justificación metodológica y cumplimiento de restricciones de diseño…"></textarea>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Nivel de rigor pedagógico</label>
+                <select id="configRigor" class="form-select">
+                  <option value="low">Bajo — Formativo</option>
+                  <option value="medium" selected>Medio — Estándar</option>
+                  <option value="high">Alto — Exigente</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tamaño del pool de preguntas (10–30)</label>
+                <input type="number" id="configPoolSize" class="form-input" min="10" max="30" value="15" required>
+              </div>
+            </div>
+
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">Preguntas por Flash Test</label>
+                <input type="number" id="configNumTest" class="form-input" min="1" max="15" value="5" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Umbral alerta IA (%)</label>
+                <input type="number" id="configUmbralIA" class="form-input" min="0" max="100" value="40" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Umbral coherencia Flash (%)</label>
+                <input type="number" id="configUmbralCoherencia" class="form-input" min="0" max="100" value="60" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tiempo del Flash Test (segundos, mínimo 30)</label>
+              <input type="number" id="configTiempoTest" class="form-input" min="30" max="300" step="5" value="60" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar parámetros</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div><!-- /container -->
+</div><!-- /mainApp -->
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS                                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Anexo A -->
+<div id="anexoAModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('anexoAModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">📋 Desglose Detallado — Anexo A</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('anexoAModal')">✕</button>
+    </div>
+    <div class="modal-body" id="anexoAContainer"></div>
+  </div>
+</div>
+
+<!-- Cita defensa oral -->
+<div id="citaModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('citaModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">📅 Agendar Defensa Oral</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('citaModal')">✕</button>
+    </div>
+    <form onsubmit="submitCita(event)">
+      <div class="modal-body">
+        <input type="hidden" id="citaStudentId">
+        <div class="callout callout-amber mb-4">
+          <div class="callout-icon">⚠️</div>
+          <div>Citando a: <strong id="citaStudentName"></strong></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de la interrogación</label>
+          <input type="date" id="citaDate" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bloque horario (ej: 10:00 - 10:15)</label>
+          <input type="text" id="citaBloque" class="form-input" value="10:00 - 10:15" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acuerdos y focos de pregunta</label>
+          <textarea id="citaAcuerdos" class="form-textarea" rows="2" placeholder="Preguntar sobre la metodología de la sección 3…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('citaModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Confirmar cita</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Cierre de evaluacion / % Logro -->
+<div id="cierreModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('cierreModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">✍ Confirmación de % Logro Final</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('cierreModal')">✕</button>
+    </div>
+    <form onsubmit="submitCierreNota(event)">
+      <div class="modal-body">
+        <input type="hidden" id="cierreStudentId">
+        <p class="text-sm text-muted mb-4">Estudiante: <strong id="cierreStudentName" class="text-sm" style="color:var(--text)"></strong></p>
+        <div class="form-group">
+          <label class="form-label">% de Logro Final (0% – 100%)</label>
+          <input type="number" id="cierreLogro" class="form-input" min="0" max="100" step="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Justificación del docente (obligatoria · RN-004)</label>
+          <textarea id="cierreJustificacion" class="form-textarea" rows="3" required></textarea>
+          <p class="text-xs text-muted mt-1">Este campo queda registrado en la auditoría inmutable.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('cierreModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Registrar evaluación definitiva</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Dispatch links -->
+<div id="dispatchModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('dispatchModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">⚡ Flash Tests Despachados — Enlaces Tokenizados</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('dispatchModal')">✕</button>
+    </div>
+    <div class="modal-body" id="dispatchLinksContainer"></div>
+  </div>
+</div>
+
+<!-- Markdown preview -->
+<div id="markdownModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('markdownModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">📄 Contenido Markdown Extraído</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('markdownModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <pre id="markdownPreviewBody" style="white-space:pre-wrap;font-size:0.78rem;font-family:'JetBrains Mono',monospace;background:var(--surface-2);padding:1rem;border-radius:var(--r-md);overflow-x:auto;"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Nueva asignatura -->
+<div id="newCourseModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('newCourseModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">＋ Nueva Asignatura</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('newCourseModal')">✕</button>
+    </div>
+    <form onsubmit="handleCreateCourse(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" id="newCourseNombre" class="form-input" placeholder="Ej: INFO1197 - Proyecto" required>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Período</label>
+            <input type="text" id="newCoursePeriodo" class="form-input" value="Semestre 2" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Año</label>
+            <input type="number" id="newCourseAno" class="form-input" value="2026" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newCourseModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Audit diff -->
+<div id="auditModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('auditModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">🛡️ Diferencias del Registro Auditado</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('auditModal')">✕</button>
+    </div>
+    <div class="modal-body" id="auditDiffBody"></div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

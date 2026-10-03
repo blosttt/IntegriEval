@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flash Test — IntegriEval</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    /* ── Flash Test Layout ──────────────────────────────────────────── */
+    body {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Minimal Header */
+    .ft-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ft-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .ft-logo {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-purple));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.8rem; color: white;
+    }
+
+    .ft-brand-name { font-weight: 700; font-size: 0.9rem; }
+    .ft-brand-sub  { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* Security badge */
+    .security-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.65rem;
+      background: var(--success-light);
+      border: 1px solid var(--success);
+      border-radius: var(--r-full);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--success-dark);
+    }
+
+    [data-theme="dark"] .security-badge { color: #6ee7b7; }
+
+    /* Main content area */
+    .ft-main {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .ft-card {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* ── States ──────────────────────────────────────────────────────── */
+
+    /* Loading */
+    .ft-state { text-align: center; padding: 3rem 2rem; }
+    .ft-state-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .ft-state-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .ft-state-sub { color: var(--text-muted); font-size: 0.88rem; max-width: 360px; margin: 0 auto; line-height: 1.6; }
+
+    /* Intro */
+    .intro-header {
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-purple));
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      padding: 2rem 2rem 1.75rem;
+      color: white;
+    }
+
+    .intro-kicker {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+      margin-bottom: 0.5rem;
+    }
+
+    .intro-name { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+    .intro-course { font-size: 0.85rem; opacity: 0.75; margin-top: 0.25rem; }
+
+    .intro-meta {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .intro-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--r-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .intro-body {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--r-xl) var(--r-xl);
+      padding: 1.75rem;
+    }
+
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .rules-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .rule-icon {
+      width: 22px; height: 22px;
+      background: var(--surface-2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Question Area */
+    .quiz-progress {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quiz-counter {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .quiz-question {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* Timer */
+    .timer-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.75rem;
+    }
+
+    /* Submit button countdown */
+    .submit-countdown {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 0.75rem;
+    }
+
+    /* Results card */
+    .result-score-ring {
+      width: 140px; height: 140px;
+      position: relative;
+      margin: 0 auto 1.5rem;
+    }
+
+    .result-score-ring svg { transform: rotate(-90deg); }
+
+    .result-score-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .result-pct {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    .result-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .results-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-meta-item {
+      text-align: center;
+      padding: 0.875rem;
+      background: var(--surface-2);
+      border-radius: var(--r-md);
+    }
+
+    .rmi-val  { font-size: 1.4rem; font-weight: 800; }
+    .rmi-lbl  { font-size: 0.68rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .timeout-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--surface-3);
+      border-radius: var(--r-full);
+      overflow: hidden;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      z-index: 100;
+    }
+
+    .timeout-fill {
+      height: 100%;
+      background: var(--brand-blue);
+      border-radius: var(--r-full);
+      transition: width 1s linear, background 0.3s;
+    }
+
+    .timeout-fill.critical { background: var(--danger); }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- ── Header ───────────────────────────────────────────────────────── -->
+<header class="ft-header">
+  <div class="ft-brand">
+    <div class="ft-logo">IE</div>
+    <div>
+      <div class="ft-brand-name">IntegriEval</div>
+      <div class="ft-brand-sub">Flash Test · Evaluación auténtica</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:.75rem;align-items:center;">
+    <div class="security-badge" id="sessionStatus">
+      <span>🔒</span> Sesión segura
+    </div>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+</header>
+
+<!-- Top progress bar (timer visual) -->
+<div class="timeout-bar" id="timeoutBar" style="display:none;">
+  <div class="timeout-fill" id="timeoutFill"></div>
+</div>
+
+<!-- ── Main ─────────────────────────────────────────────────────────── -->
+<main class="ft-main">
+  <div class="ft-card">
+
+    <!-- Loading state -->
+    <div id="stateLoading" class="card">
+      <div class="ft-state">
+        <div class="ft-state-icon" style="animation:spin 1s linear infinite;display:inline-block;">⏳</div>
+        <div class="ft-state-title">Cargando tu Flash Test…</div>
+        <div class="ft-state-sub">Estamos preparando tu evaluación personalizada. Esto tarda solo un momento.</div>
+      </div>
+    </div>
+
+    <!-- Invalid token -->
+    <div id="stateInvalid" class="card" style="display:none;">
+      <div class="ft-state">
+        <div class="ft-state-icon">🔗</div>
+        <div class="ft-state-title">Enlace no válido o expirado</div>
+        <div class="ft-state-sub">Este enlace ya fue utilizado, ha expirado (vigencia 48 h) o no es válido. Contacta a tu docente para obtener uno nuevo.</div>
+        <div style="margin-top:1.5rem;padding:.875rem;background:var(--surface-2);border-radius:var(--r-md);font-size:.78rem;color:var(--text-muted);">
+          <strong>Token:</strong> <code id="tokenDisplay">—</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intro screen -->
+    <div id="stateIntro" style="display:none;">
+      <div class="intro-header">
+        <div class="intro-kicker">⚡ Flash Test · Evaluación de Integridad</div>
+        <div class="intro-name" id="introStudentName">Estudiante</div>
+        <div class="intro-course" id="intoCourse">—</div>
+        <div class="intro-meta">
+          <div class="intro-pill" id="introNumPreguntas">❓ — preguntas</div>
+          <div class="intro-pill" id="introTiempo">⏱ — segundos c/u</div>
+          <div class="intro-pill">🔒 Sesión única</div>
+        </div>
+      </div>
+      <div class="intro-body">
+        <div class="callout callout-amber mb-4">
+          <div class="callout-icon">⚠️</div>
+          <div class="callout-content">
+            <div class="callout-title">Instrucciones importantes</div>
+            Esta sesión se monitorea en tiempo real. Solo tienes <strong>una oportunidad</strong> para completar este test. No cierres esta ventana.
+          </div>
+        </div>
+        <ul class="rules-list">
+          <li>
+            <div class="rule-icon">1️⃣</div>
+            <span>Lee cada pregunta con atención. Se basan directamente en el contenido de <strong>tu informe</strong>.</span>
+          </li>
+          <li>
+            <div class="rule-icon">⏱️</div>
+            <span>Tienes un tiempo limitado por pregunta. El cronómetro comienza al presionar <em>Comenzar</em>.</span>
+          </li>
+          <li>
+            <div class="rule-icon">🎯</div>
+            <span>Elige la mejor alternativa. No hay opción para volver atrás.</span>
+          </li>
+          <li>
+            <div class="rule-icon">🔒</div>
+            <span>Tus respuestas se envían automáticamente al finalizar cada pregunta. El docente ve tu progreso en vivo.</span>
+          </li>
+        </ul>
+        <button class="btn btn-primary btn-xl w-full" onclick="startTest()">
+          Comenzar Flash Test &nbsp;→
+        </button>
+      </div>
+    </div>
+
+    <!-- Quiz screen -->
+    <div id="stateQuiz" style="display:none;">
+      <div class="card">
+        <div style="padding:1.5rem 1.5rem 0;">
+          <!-- Progress -->
+          <div class="quiz-progress">
+            <span class="quiz-counter" id="quizCounter">Pregunta 1 de 5</span>
+            <div class="progress-bar-wrap" style="flex:1;">
+              <div class="progress-bar" id="quizProgressBar" style="width:0%;"></div>
+            </div>
+          </div>
+
+          <!-- Timer ring -->
+          <div class="timer-container">
+            <div class="timer-svg-wrap">
+              <svg class="timer-ring" width="120" height="120" viewBox="0 0 120 120">
+                <circle class="timer-ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="timer-ring-fg" id="timerRingFg" cx="60" cy="60" r="52"
+                  stroke-dasharray="327" stroke-dashoffset="0"/>
+              </svg>
+              <div class="timer-text-wrap">
+                <div class="timer-seconds" id="timerSeconds">—</div>
+                <div class="timer-label">segundos</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question text -->
+          <div class="quiz-question" id="questionText">…</div>
+        </div>
+
+        <!-- Options -->
+        <div style="padding:0 1.5rem 1.5rem;" id="optionsContainer"></div>
+      </div>
+    </div>
+
+    <!-- Completed state -->
+    <div id="stateCompleted" style="display:none;">
+      <div class="card">
+        <div class="card-body" style="text-align:center;padding:2rem;">
+          <!-- Score ring -->
+          <div class="result-score-ring">
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="60" fill="none" stroke="var(--surface-3)" stroke-width="8"/>
+              <circle id="resultRing" cx="70" cy="70" r="60" fill="none"
+                stroke="var(--brand-blue)" stroke-width="8" stroke-linecap="round"
+                stroke-dasharray="377" stroke-dashoffset="377"
+                style="transform-origin:center;transform:rotate(-90deg);transition:stroke-dashoffset 1.2s var(--ease);"/>
+            </svg>
+            <div class="result-score-text">
+              <div class="result-pct" id="resultPct">—</div>
+              <div class="result-label">logro</div>
+            </div>
+          </div>
+
+          <div id="resultEmoji" style="font-size:2rem;margin-bottom:.5rem;">🎉</div>
+          <h2 id="resultTitle" style="margin-bottom:.5rem;">¡Test completado!</h2>
+          <p id="resultDesc" class="text-sm text-muted" style="max-width:360px;margin:0 auto 1.5rem;"></p>
+
+          <!-- Meta grid -->
+          <div class="results-meta">
+            <div class="result-meta-item">
+              <div class="rmi-val" id="rmCorrect">—</div>
+              <div class="rmi-lbl">Correctas</div>
+            </div>
+            <div class="result-meta-item">
+              <div class="rmi-val" id="rmTotal">—</div>
+              <div class="rmi-lbl">Respondidas</div>
+            </div>
+            <div class="result-meta-item">
+              <div class="rmi-val" id="rmTime">—</div>
+              <div class="rmi-lbl">Tiempo total</div>
+            </div>
+          </div>
+
+          <div class="callout callout-blue" style="text-align:left;">
+            <div class="callout-icon">ℹ️</div>
+            <div class="callout-content">
+              <div class="callout-title">¿Qué sigue?</div>
+              Tu docente revisará tus respuestas y tomará una decisión final sobre tu calificación. Mantente atento a tu correo universitario.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+  /* ── Helpers ────────────────────────────────────────────────────── */
+  function toggleTheme() {
+    const cur  = document.documentElement.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    document.getElementById("themeBtn").textContent = next === "dark" ? "☀️" : "🌙";
+  }
+
+  function showToast(title, msg = "", type = "info") {
+    const icons = { info: "ℹ️", success: "✅", warning: "⚠️", error: "❌" };
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `
+      <div class="toast-icon">${icons[type] || icons.info}</div>
+      <div class="toast-body">
+        <div class="toast-title">${title}</div>
+        ${msg ? `<div class="toast-msg">${msg}</div>` : ""}
+      </div>`;
+    document.getElementById("toast-container").appendChild(el);
+    setTimeout(() => {
+      el.classList.add("toast-out");
+      el.addEventListener("animationend", () => el.remove());
+    }, 4000);
+  }
+
+  function setState(id) {
+    ["stateLoading","stateInvalid","stateIntro","stateQuiz","stateCompleted"]
+      .forEach(s => document.getElementById(s).style.display = s === id ? "" : "none");
+  }
+
+  /* ── Data ───────────────────────────────────────────────────────── */
+  const token = location.pathname.split("/").pop();
+  document.getElementById("tokenDisplay").textContent = token;
+
+  let questions = [];
+  let currentQ  = 0;
+  let answers   = [];
+  let ws        = null;
+  let timer     = null;
+  let secondsLeft = 60;
+  let totalSeconds = 60;
+  let startTime = null;
+
+  /* ── Init ───────────────────────────────────────────────────────── */
+  window.addEventListener("load", async () => {
+    // Theme
+    const saved = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", saved);
+    document.getElementById("themeBtn").textContent = saved === "dark" ? "☀️" : "🌙";
+
+    try {
+      const info = await fetch(`/api/flash-test/${token}/info`).then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      });
+      document.getElementById("introStudentName").textContent = info.estudiante_nombre;
+      document.getElementById("intoCourse").textContent = `${info.asignatura_nombre} · ${info.asignatura_periodo}`;
+      document.getElementById("introNumPreguntas").textContent = `❓ ${info.num_preguntas} preguntas`;
+      document.getElementById("introTiempo").textContent = `⏱ ${info.tiempo_segundos}s c/u`;
+      totalSeconds = info.tiempo_segundos;
+      questions = info.preguntas;
+      setState("stateIntro");
+    } catch {
+      setState("stateInvalid");
+    }
+  });
+
+  /* ── WebSocket ──────────────────────────────────────────────────── */
+  function connectWS() {
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${proto}//${location.host}/ws/flash-test/${token}`);
+    ws.onopen = () => {
+      document.getElementById("sessionStatus").innerHTML = "🔒 Conectado en vivo";
+    };
+    ws.onerror = () => {
+      document.getElementById("sessionStatus").innerHTML = "⚠️ Reconectando…";
+    };
+  }
+
+  function sendWS(data) {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
+  }
+
+  /* ── Start test ─────────────────────────────────────────────────── */
+  function startTest() {
+    connectWS();
+    startTime = Date.now();
+    setState("stateQuiz");
+    document.getElementById("timeoutBar").style.display = "";
+    renderQuestion(0);
+  }
+
+  /* ── Timer ──────────────────────────────────────────────────────── */
+  function startTimer() {
+    secondsLeft = totalSeconds;
+    const circumference = 327;
+
+    const ringEl   = document.getElementById("timerRingFg");
+    const secsEl   = document.getElementById("timerSeconds");
+    const fillEl   = document.getElementById("timeoutFill");
+
+    secsEl.textContent = secondsLeft;
+    ringEl.style.strokeDashoffset = "0";
+    fillEl.style.width = "100%";
+    ringEl.classList.remove("critical");
+    fillEl.classList.remove("critical");
+
+    if (timer) clearInterval(timer);
+
+    timer = setInterval(() => {
+      secondsLeft--;
+      secsEl.textContent = secondsLeft;
+
+      const pct    = secondsLeft / totalSeconds;
+      const offset = circumference * (1 - pct);
+      ringEl.style.strokeDashoffset = offset;
+      fillEl.style.width = `${pct * 100}%`;
+
+      if (secondsLeft <= 10) {
+        ringEl.classList.add("critical");
+        fillEl.classList.add("critical");
+        secsEl.style.color = "var(--danger)";
+      }
+
+      if (secondsLeft <= 0) {
+        clearInterval(timer);
+        autoSkip();
+      }
+    }, 1000);
+  }
+
+  /* ── Render question ────────────────────────────────────────────── */
+  function renderQuestion(index) {
+    if (index >= questions.length) { submitAll(); return; }
+    currentQ = index;
+
+    const q = questions[index];
+    const pct = Math.round((index / questions.length) * 100);
+
+    document.getElementById("quizCounter").textContent =
+      `Pregunta ${index + 1} de ${questions.length}`;
+    document.getElementById("quizProgressBar").style.width = `${pct}%`;
+    document.getElementById("quizProgressBar").className =
+      "progress-bar" + (pct >= 60 ? " success" : pct >= 30 ? "" : "");
+    document.getElementById("questionText").textContent = q.texto;
+
+    const letters = ["A","B","C","D","E"];
+    document.getElementById("optionsContainer").innerHTML =
+      q.alternativas.map((alt, i) => `
+        <div class="option-card" onclick="selectAnswer(${index},'${alt.id}')" id="opt_${alt.id}">
+          <div class="option-key">${letters[i] || alt.id}</div>
+          <div class="flex-1 text-sm" style="line-height:1.5;">${alt.texto}</div>
+        </div>`).join("");
+
+    secsEl_refresh();
+    startTimer();
+
+    sendWS({ type: "QUESTION_STARTED", pregunta_idx: index, pregunta_id: q.id });
+  }
+
+  function secsEl_refresh() {
+    document.getElementById("timerSeconds").style.color = "var(--text)";
+  }
+
+  /* ── Select answer ──────────────────────────────────────────────── */
+  function selectAnswer(idx, altId) {
+    if (timer) { clearInterval(timer); timer = null; }
+
+    // Visual feedback
+    document.querySelectorAll(".option-card").forEach(c => c.style.pointerEvents = "none");
+    const selected = document.getElementById(`opt_${altId}`);
+    if (selected) selected.classList.add("selected");
+
+    answers.push({ pregunta_id: questions[idx].id, alternativa_id: altId });
+    sendWS({ type: "ANSWER", pregunta_id: questions[idx].id, alternativa_id: altId });
+
+    setTimeout(() => renderQuestion(idx + 1), 600);
+  }
+
+  /* ── Auto-skip on timeout ───────────────────────────────────────── */
+  function autoSkip() {
+    showToast("Tiempo agotado", "Pasando a la siguiente pregunta…", "warning");
+    answers.push({ pregunta_id: questions[currentQ].id, alternativa_id: null });
+    sendWS({ type: "TIMEOUT", pregunta_id: questions[currentQ].id });
+    setTimeout(() => renderQuestion(currentQ + 1), 400);
+  }
+
+  /* ── Submit all ─────────────────────────────────────────────────── */
+  async function submitAll() {
+    if (timer) { clearInterval(timer); timer = null; }
+    document.getElementById("timeoutBar").style.display = "none";
+
+    try {
+      const res = await fetch(`/api/flash-test/${token}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ respuestas: answers })
+      }).then(r => r.json());
+
+      showResults(res);
+    } catch {
+      setState("stateCompleted");
+    }
+  }
+
+  /* ── Show results ───────────────────────────────────────────────── */
+  function showResults(res) {
+    setState("stateCompleted");
+    const pct = res.porcentaje_logro || 0;
+    const correct = res.respuestas_correctas || 0;
+    const total   = answers.length;
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const mins    = Math.floor(elapsed / 60);
+    const secs    = elapsed % 60;
+
+    // Animate ring
+    setTimeout(() => {
+      const ring = document.getElementById("resultRing");
+      const circumference = 377;
+      ring.style.strokeDashoffset = circumference * (1 - pct / 100);
+      if (pct >= 70) ring.style.stroke = "var(--success)";
+      else if (pct >= 50) ring.style.stroke = "var(--warning)";
+      else ring.style.stroke = "var(--danger)";
+    }, 200);
+
+    document.getElementById("resultPct").textContent = `${pct}%`;
+    document.getElementById("rmCorrect").textContent = correct;
+    document.getElementById("rmTotal").textContent   = total;
+    document.getElementById("rmTime").textContent    = mins ? `${mins}m ${secs}s` : `${secs}s`;
+
+    if (pct >= 70) {
+      document.getElementById("resultEmoji").textContent = "🎉";
+      document.getElementById("resultTitle").textContent = "¡Excelente desempeño!";
+      document.getElementById("resultDesc").textContent  = "Demostraste un sólido dominio del contenido de tu informe.";
+    } else if (pct >= 50) {
+      document.getElementById("resultEmoji").textContent = "📝";
+      document.getElementById("resultTitle").textContent = "Test completado";
+      document.getElementById("resultDesc").textContent  = "Tu docente revisará estos resultados junto con tu informe.";
+    } else {
+      document.getElementById("resultEmoji").textContent = "⚠️";
+      document.getElementById("resultTitle").textContent = "Resultados enviados";
+      document.getElementById("resultDesc").textContent  = "El docente tomará una decisión y podría agendarse una defensa oral.";
+    }
+
+    if (ws) ws.close();
+  }
+</script>
+</body>
+</html>

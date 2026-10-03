@@ -1,38 +1,38 @@
-# Environments
-venv/
+# Environment
 .venv/
-env/
+venv/
 ENV/
+.env
 
 # Python
-**/__pycache__/
-**/*.pyc
-**/*.pyo
-**/*.pyd
-**/.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.pytest_cache/
 
-# Databases
-backend/*.db
-backend/*.db-journal
+# Database & SQLite
 *.db
-*.db-journal
+*.sqlite3
+integrieval.db
+
+# Uploads & temporary artifacts
 uploads/
-backend/uploads/
-frontend/uploads/
+*.log
 
-# NextJS
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-
-# Environments / Credentials
-.env
-backend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-
-# OS files
+# IDE & OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
+
+# External unrelated PDF files
+Clase Sala ERA*
+Depresión.pdf
+Depresi?n.pdf
+GC trastornos*.pdf
+GC usuario*.pdf
+Prevención*.pdf
+Prevenci?n*.pdf
+trastorno bipolar*.pdf
+Trastorno sintomas*.pdf
