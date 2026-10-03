@@ -1087,8 +1087,13 @@ tbody tr:hover { background: var(--surface-2); }
 }
 
 .google-icon-svg {
-  width: 14px;
-  height: 14px;
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
 }
 
 /* ── Hero Section (Crea, administra y revisa evaluaciones) ──────────────── */

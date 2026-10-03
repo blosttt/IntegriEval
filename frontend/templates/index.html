@@ -7,7 +7,248 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* Critical Base & Theme — 100% Reliable Render */
+    :root {
+      --bg: #090d16;
+      --surface: #101622;
+      --surface-2: #162032;
+      --surface-3: #1e2c44;
+      --border: #1e3048;
+      --border-strong: #2a4060;
+      --text: #f0f6ff;
+      --text-2: #b8d0f0;
+      --text-muted: #6b8ab0;
+      --brand-blue: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #090d16 !important;
+      color: #f0f6ff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    * { box-sizing: border-box; }
+
+    /* Login Page Exact Layout */
+    .uct-login-page {
+      min-height: 100vh;
+      background: #090d16 !important;
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      color: #f1f5f9;
+    }
+    .uct-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .uct-emblem {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-block;
+      background: conic-gradient(#0284c7 0deg 180deg, #f59e0b 180deg 360deg);
+      box-shadow: 0 0 14px rgba(2, 132, 199, 0.45);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .uct-emblem::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      background: #090d16;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .uct-brand-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .uct-login-card {
+      width: 100%;
+      max-width: 440px;
+      background: #101622 !important;
+      border: 1px solid #1c2638 !important;
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+    .uct-card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 1.75rem;
+      line-height: 1.4;
+    }
+    .uct-auth-btn {
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      margin-bottom: 0.875rem;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+    .uct-btn-prof {
+      background: #112845 !important;
+      color: #38bdf8 !important;
+      border: 1px solid #1e3a5f !important;
+    }
+    .uct-btn-prof:hover {
+      background: #16365d !important;
+      color: #7dd3fc !important;
+      border-color: #2563eb !important;
+      transform: translateY(-1px);
+    }
+    .uct-btn-alum {
+      background: #131c2b !important;
+      color: #e2e8f0 !important;
+      border: 1px solid #233148 !important;
+    }
+    .uct-btn-alum:hover {
+      background: #1a273b !important;
+      color: #ffffff !important;
+      border-color: #3b82f6 !important;
+      transform: translateY(-1px);
+    }
+    .uct-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 1.75rem;
+    }
+    .google-icon-svg {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
+      min-height: 16px !important;
+      max-height: 16px !important;
+      display: inline-block !important;
+      vertical-align: middle !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Modal styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal {
+      background: #101622;
+      border: 1px solid #1e3048;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      color: #f0f6ff;
+      overflow: hidden;
+    }
+    .modal-sm { max-width: 440px; }
+    .modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #1e3048;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .modal-body { padding: 1.25rem; }
+    .modal-footer {
+      padding: 0.85rem 1.25rem;
+      border-top: 1px solid #1e3048;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* Common Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary { background: #3b82f6; color: #fff; border-color: #2563eb; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #162032; color: #b8d0f0; border-color: #1e3048; }
+    .btn-secondary:hover { background: #1e2c44; color: #fff; }
+    .btn-ghost { background: transparent; color: #6b8ab0; border: none; }
+    .btn-ghost:hover { color: #f0f6ff; background: rgba(255,255,255,0.06); }
+    .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.78rem; }
+    .btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 6px; }
+
+    /* Role Badges */
+    .role-badge-gold {
+      background: #fef08a;
+      color: #854d0e;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+    .role-badge-green {
+      background: #bbf7d0;
+      color: #166534;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+    .role-badge-blue {
+      background: #bfdbfe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+  </style>
+  <link rel="stylesheet" href="/static/css/style.css?v=3.2">
 </head>
 <body>
 
@@ -17,7 +258,7 @@
 <!-- ══════════════════════════════════════════════════════════════════════ -->
 <!-- LOGIN SCREEN (Cuestionarios UCT Exact Aesthetic)                      -->
 <!-- ══════════════════════════════════════════════════════════════════════ -->
-<div id="loginScreen" class="uct-login-page">
+<div id="loginScreen" class="uct-login-page" style="display:flex;">
   <!-- Brand logo header -->
   <div class="uct-brand-header">
     <span class="uct-emblem"></span>
@@ -28,65 +269,63 @@
   <div class="uct-login-card">
     <h1 class="uct-card-title">Inicia sesión con tu cuenta institucional</h1>
 
-    <!-- Action 1: Entrar como profesor -->
-    <button type="button" class="uct-auth-btn uct-btn-prof" onclick="toggleProfLogin()" id="btnProfToggle">
+    <!-- Action 1: Entrar como profesor (Acceso Inmediato 1-Click) -->
+    <button type="button" class="uct-auth-btn uct-btn-prof" onclick="loginAsDocente()" id="btnProfPrimary">
       <span>Entrar como profesor</span>
     </button>
 
-    <!-- Expandable Professor Access Options -->
-    <div id="profOptionsBox" style="display:none;margin-bottom:1rem;text-align:left;animation:fadeIn 0.2s ease;">
-      <p class="text-xs text-muted mb-2" style="text-transform:uppercase;letter-spacing:0.04em;">Acceso rápido de demostración:</p>
-      <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;">
-        <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.6rem 0.8rem;text-align:left;" onclick="fillDemo('docente@universidad.cl','Docente123!')">
-          <span>🎓</span>
-          <div>
-            <div style="font-weight:600;font-size:0.78rem;">Prof. Sebastián Cisternas</div>
-            <div class="text-xs text-muted">docente@universidad.cl (Docente)</div>
-          </div>
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.6rem 0.8rem;text-align:left;" onclick="fillDemo('admin@universidad.cl','Admin123!')">
-          <span>⚙️</span>
-          <div>
-            <div style="font-weight:600;font-size:0.78rem;">Administrador Sistema</div>
-            <div class="text-xs text-muted">admin@universidad.cl (Admin)</div>
-          </div>
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.6rem 0.8rem;text-align:left;" onclick="fillDemo('ayudante@universidad.cl','Ayudante123!')">
-          <span>🤝</span>
-          <div>
-            <div style="font-weight:600;font-size:0.78rem;">Ana Ayudante González</div>
-            <div class="text-xs text-muted">ayudante@universidad.cl (Ayudante)</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- Manual login fallback -->
-      <div id="loginError" class="callout callout-red mb-2" style="display:none;padding:0.5rem 0.75rem;">
-        <span id="loginErrorMsg">Credenciales incorrectas.</span>
-      </div>
-
-      <form onsubmit="handleLogin(event)" style="border-top:1px solid var(--border);padding-top:0.75rem;">
-        <div class="form-group mb-2">
-          <label class="form-label text-xs">Correo institucional</label>
-          <input type="email" id="loginEmail" class="form-input text-xs" placeholder="nombre@universidad.cl" required>
-        </div>
-        <div class="form-group mb-2">
-          <label class="form-label text-xs">Contraseña</label>
-          <input type="password" id="loginPassword" class="form-input text-xs" placeholder="••••••••" required>
-        </div>
-        <button type="submit" id="loginBtn" class="btn btn-primary btn-sm w-full">Ingresar</button>
-      </form>
-    </div>
-
-    <!-- Action 2: Entrar como alumno -->
-    <button type="button" class="uct-auth-btn uct-btn-alum" onclick="openStudentDialog()">
+    <!-- Action 2: Entrar como alumno (Modal Flash Test) -->
+    <button type="button" class="uct-auth-btn uct-btn-alum" onclick="openStudentDialog()" id="btnAlumPrimary">
       <span>Entrar como alumno</span>
     </button>
 
-    <!-- Google guarantee footer -->
+    <!-- Accordion: Otras opciones de ingreso (Admin / Ayudante / Manual) -->
+    <div style="margin-top:0.6rem;margin-bottom:0.25rem;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="toggleManualLogin()" style="color:#64748b;font-size:0.75rem;width:100%;justify-content:center;">
+        <span>Otras opciones (Admin, Ayudante, Credenciales)</span> <span id="manualToggleArrow" style="font-size:0.7rem;">▼</span>
+      </button>
+
+      <div id="manualOptionsBox" style="display:none;margin-top:0.75rem;padding:0.85rem;background:#131c2b;border:1px solid #1f2d42;border-radius:10px;text-align:left;">
+        <p class="text-xs text-muted mb-2" style="font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:0.68rem;">Accesos directos por rol:</p>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.85rem;">
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginAsAdmin()">
+            <span>⚙️</span>
+            <div>
+              <div style="font-weight:600;font-size:0.76rem;">Administrador Sistema</div>
+              <div class="text-xs text-muted">admin@universidad.cl</div>
+            </div>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginAsAyudante()">
+            <span>🤝</span>
+            <div>
+              <div style="font-weight:600;font-size:0.76rem;">Ana Ayudante González</div>
+              <div class="text-xs text-muted">ayudante@universidad.cl</div>
+            </div>
+          </button>
+        </div>
+
+        <p class="text-xs text-muted mb-2" style="font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:0.68rem;border-top:1px solid #1e3048;padding-top:0.5rem;">Ingreso manual:</p>
+        <div id="loginError" class="callout callout-red mb-2" style="display:none;padding:0.4rem 0.6rem;font-size:0.75rem;">
+          <span id="loginErrorMsg">Credenciales incorrectas.</span>
+        </div>
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group mb-2">
+            <label class="form-label text-xs">Correo</label>
+            <input type="email" id="loginEmail" class="form-input text-xs" placeholder="nombre@universidad.cl" required>
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label text-xs">Contraseña</label>
+            <input type="password" id="loginPassword" class="form-input text-xs" placeholder="••••••••" required>
+          </div>
+          <button type="submit" id="loginBtn" class="btn btn-primary btn-sm w-full">Ingresar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Google guarantee footer with clamped SVG -->
     <div class="uct-guarantee">
       <span>Seguridad y privacidad garantizadas por</span>
-      <svg class="google-icon-svg" viewBox="0 0 24 24">
+      <svg class="google-icon-svg" viewBox="0 0 24 24" width="16" height="16" style="width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;min-height:16px!important;max-height:16px!important;display:inline-block!important;vertical-align:middle;flex-shrink:0!important;">
         <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.665-5.17 3.665-9.12z"/>
         <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.26 21.36 7.33 24 12 24z"/>
         <path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.13z"/>
@@ -833,7 +1072,7 @@
   </div>
 </div>
 
-<script src="/static/js/app.js"></script>
+<script src="/static/js/app.js?v=3.2"></script>
 </body>
 </html>
 

@@ -77,13 +77,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function showLogin()  {
-  document.getElementById("loginScreen").style.display = "";
-  document.getElementById("mainApp").style.display = "none";
+  const login = document.getElementById("loginScreen");
+  const app = document.getElementById("mainApp");
+  if (login) login.style.display = "flex";
+  if (app) app.style.display = "none";
 }
 
 function showApp() {
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("mainApp").style.display = "";
+  const login = document.getElementById("loginScreen");
+  const app = document.getElementById("mainApp");
+  if (login) login.style.display = "none";
+  if (app) app.style.display = "block";
 }
 
 /* ── Auth ───────────────────────────────────────────────────────────── */
@@ -124,13 +128,34 @@ function applyUserUI() {
 }
 
 /* ── UCT UI & Guided Workflow Helpers ──────────────────────────────────── */
-function toggleProfLogin() {
-  const box = document.getElementById("profOptionsBox");
+function loginAsDocente() {
+  const btn = document.getElementById("btnProfPrimary");
+  if (btn) {
+    btn.innerHTML = `<span style="display:inline-block;animation:spin 0.8s linear infinite;margin-right:6px;">⏳</span> Conectando como Docente…`;
+    btn.disabled = true;
+  }
+  fillDemo('docente@universidad.cl', 'Docente123!');
+}
+
+function loginAsAdmin() {
+  fillDemo('admin@universidad.cl', 'Admin123!');
+}
+
+function loginAsAyudante() {
+  fillDemo('ayudante@universidad.cl', 'Ayudante123!');
+}
+
+function toggleManualLogin() {
+  const box = document.getElementById("manualOptionsBox");
   if (!box) return;
   const isHidden = box.style.display === "none";
   box.style.display = isHidden ? "block" : "none";
-  const btn = document.getElementById("btnProfToggle");
-  if (btn) btn.style.borderColor = isHidden ? "var(--brand-blue)" : "";
+  const arrow = document.getElementById("manualToggleArrow");
+  if (arrow) arrow.textContent = isHidden ? "▲" : "▼";
+}
+
+function toggleProfLogin() {
+  loginAsDocente();
 }
 
 function openStudentDialog() {
@@ -155,8 +180,10 @@ function scrollToWorkflow() {
 
 /* Demo quick-fill */
 function fillDemo(email, password) {
-  document.getElementById("loginEmail").value    = email;
-  document.getElementById("loginPassword").value = password;
+  const emailInput = document.getElementById("loginEmail");
+  const passInput  = document.getElementById("loginPassword");
+  if (emailInput) emailInput.value = email;
+  if (passInput)  passInput.value  = password;
   // Auto-submit
   handleLogin({ preventDefault: () => {} });
 }
@@ -167,7 +194,7 @@ async function handleLogin(e) {
   const btn    = document.getElementById("loginBtn");
   const errEl  = document.getElementById("loginError");
   const errMsg = document.getElementById("loginErrorMsg");
-  errEl.style.display = "none";
+  if (errEl) errEl.style.display = "none";
   if (btn) { btn.textContent = "Iniciando sesión…"; btn.disabled = true; }
 
   try {
@@ -183,10 +210,16 @@ async function handleLogin(e) {
     await loadCourses();
     showToast("Bienvenido", currentUser.nombre, "success");
   } catch (err) {
-    errMsg.textContent = err.message;
-    errEl.style.display = "flex";
+    if (errMsg) errMsg.textContent = err.message;
+    if (errEl) errEl.style.display = "flex";
+    showToast("Error de acceso", err.message, "error");
   } finally {
     if (btn) { btn.textContent = "Iniciar sesión"; btn.disabled = false; }
+    const btnProf = document.getElementById("btnProfPrimary");
+    if (btnProf) {
+      btnProf.innerHTML = `<span>Entrar como profesor</span>`;
+      btnProf.disabled = false;
+    }
   }
 }
 
