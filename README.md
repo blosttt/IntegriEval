@@ -1,209 +1,248 @@
 # IntegriEval 🎓⚡
-### Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección de IA y Verificación Oral Flash
+### Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección Contextual de IA y Verificación Oral Flash
 
-* **Trabajo de Título:** INFO1197 — Proyecto de Software y Título
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![WebSockets](https://img.shields.io/badge/WebSockets-Real--Time-success.svg)](https://websockets.readthedocs.io/)
+[![Repo: blosttt/IntegriEval](https://img.shields.io/badge/GitHub-blosttt%2FIntegriEval-181717?logo=github)](https://github.com/blosttt/IntegriEval)
+
+* **Proyecto de Título:** INFO1197 — Ingeniería de Software y Título
 * **Carrera:** Ingeniería Civil Informática
-* **Fecha:** Septiembre 2026 — Versión 1.0
-* **Equipo:** Sebastián Cisternas, Benjamín Sobarzo
-* **Entorno:** Educación Superior / Cátedras Universitarias Masivas (60 a 200 alumnos)
-* **Alcance:** Cursos masivos, Open-source, Costo cero, Sin fricción de login para estudiantes
+* **Versión:** 2.0 (Rediseño UI SaaS, Evaluación por % de Logro, Auditoría Inmutable)
+* **Entorno:** Educación Superior / Cátedras Universitarias Masivas (60 a 200+ estudiantes)
+* **Filosofía:** Evaluación auténtica, costo cero, 100% open-source y cero fricción para estudiantes (sin login).
 
 ---
 
 ## 1. Fundamentos Teóricos y Filosofía del Sistema
 
-IntegriEval resuelve la inviabilidad de los detectores estadísticos tradicionales de 'caja negra' y la imposibilidad logística de interrogar a cientos de estudiantes de forma individual:
-1. **Teoría de la Evaluación Auténtica (Grant Wiggins):** El foco no es perseguir estadísticamente el texto generado por IA, sino verificar si el estudiante *comprende, domina y es capaz de defender los conceptos* de su entrega.
-2. **Principio de Supervisión Humana (Human-in-the-Loop):** La Inteligencia Artificial actúa estrictamente como asistente de lectura semántica y generador de preguntas. La autoridad pedagógica y la calificación final siempre recaen en el docente.
-3. **Costo Cero y Cero Fricción:** 100% Open-source, despacho por Gmail SMTP gratuito (`aiosmtplib`), acceso de estudiantes sin cuenta ni contraseñas (únicamente mediante tokens seguros `UUIDv4`), y motor de contingencia heurístico offline (`Mock Engine`, RF-014).
+IntegriEval supera las limitaciones de los detectores estadísticos tradicionales de "caja negra" (propensos a falsos positivos y sesgos) y la inviabilidad logística de interrogar manualmente a cientos de estudiantes:
+
+1. **Teoría de la Evaluación Auténtica (Grant Wiggins):** El objetivo pedagógico central no es perseguir heurísticas de texto, sino constatar si el estudiante **comprende, domina y es capaz de defender el contenido y las decisiones técnicas** expuestas en su trabajo.
+2. **Evaluación Basada en Porcentaje de Logro (% Logro):** Se prescinde de las calificaciones preliminares numéricas arbitrarias (1.0–7.0) durante el flujo intermedio, unificando la evaluación en el **% de Logro de competencias** (0% a 100%, con umbral de aprobación y validación pedagógica).
+3. **Principio de Supervisión Humana (Human-in-the-Loop):** La IA asiste en la extracción semántica y en la generación de preguntas contextuales sobre el informe. La decisión final, la citación a defensa oral y la confirmación del logro definitivo son prerrogativa exclusiva del docente.
+4. **Cero Fricción para el Estudiante:** Los estudiantes **no requieren registrarse ni recordar credenciales**. Reciben un enlace seguro con token `UUIDv4` de vigencia acotada (48 h) que abre directamente su sesión cronometrada de Flash Test.
+5. **Cumplimiento Normativo (Ley N° 21.719 - Protección de Datos Chile):** Registro inmutable en `audit_logs` con estados previos y nuevos de cada cambio sensible, minimización de datos personales y aislamiento por cátedra (RBAC).
 
 ---
 
 ## 2. Matriz de Trazabilidad del Blueprint
 
-| Código | Requisito / Dimensión | Implementación en Código |
+| Código | Requisito / Dimensión | Implementación en IntegriEval |
 |---|---|---|
-| **RF-001** | Crear y gestionar asignaturas | `backend/app/routers/asignaturas.py`, `models.py` (`Asignatura`) |
-| **RF-002** | Ingesta masiva CSV estudiantes (detección duplicados) | `backend/app/routers/estudiantes.py` (delimitadores `,` y `;`) |
-| **RF-003** | Configurar parámetros (prompt, rigor, pool 10-30, umbrales) | `backend/app/routers/asignaturas.py`, `schemas.py` (`ParametrosConfig`) |
-| **RF-004** | Subir materiales de apoyo (Syllabus, guías, rúbricas) | `backend/app/routers/materiales.py`, `models.py` (`Material`) |
-| **RF-005** | Carga masiva de PDFs de alumnos con asociación automática | `backend/app/routers/trabajos.py`, `services/pdf_service.py` |
-| **RF-006** | Extracción semántica con títulos y tablas en Markdown | `backend/app/services/pdf_service.py` (`pymupdf4llm` y `fitz`) |
-| **RF-007** | Evaluación con LLM / Estructura estandarizada **Anexo A** | `backend/app/services/mock_engine.py`, `services/llm_service.py` |
-| **RF-008** | Generación de pool de preguntas IA (10 a 30 reactivos) | `backend/app/services/mock_engine.py` (`generate_mock_questions`) |
-| **RF-009** | Edición y selección docente de preguntas ($N \le \text{Pool}$) | `backend/app/routers/preguntas.py`, `models.py` (`Pregunta`) |
+| **RF-001** | Gestión de Asignaturas y Períodos | `backend/app/routers/asignaturas.py`, entidad `Asignatura` |
+| **RF-002** | Ingesta masiva CSV con detección de duplicados | `backend/app/routers/estudiantes.py` (delimitadores auto-detectados `,` y `;`) |
+| **RF-003** | Parámetros pedagógicos (rigor, prompt, pool 10-30, umbrales) | `backend/app/routers/asignaturas.py`, `schemas.py` (`ParametrosConfig`) |
+| **RF-004** | Materiales de apoyo (Syllabus, guías, rúbricas) | `backend/app/routers/materiales.py`, entidad `Material` |
+| **RF-005** | Ingesta PDF individual y masiva con asociación automática | `backend/app/routers/trabajos.py`, `services/pdf_service.py` |
+| **RF-006** | Extracción semántica estructurada a Markdown | `backend/app/services/pdf_service.py` (`pymupdf4llm` y `fitz`) |
+| **RF-007** | Evaluación estandarizada **Anexo A** | `backend/app/services/mock_engine.py`, `services/llm_service.py` |
+| **RF-008** | Generación de Pool de preguntas contextuales (10 a 30) | `backend/app/services/mock_engine.py` (`generate_mock_questions`) |
+| **RF-009** | Edición y selección docente de preguntas para el test | `backend/app/routers/preguntas.py`, entidad `Pregunta` |
 | **RF-010** | Despacho Flash Test vía Gmail SMTP (Tokens UUIDv4 48h) | `backend/app/services/email_service.py`, `routers/flash_test.py` |
-| **RF-011** | Interfaz Flash Test en tiempo real con WebSockets y timer | `frontend/templates/flashtest.html`, `backend/app/services/websocket_mgr.py` |
-| **RF-012** | Panel de resultados docente con métricas y alertas | `frontend/templates/index.html`, `backend/app/routers/panel.py` |
-| **RF-013** | Registro de defensas orales y ajuste de nota justificado | `backend/app/routers/panel.py` (`Cita`, `AuditLog`) |
-| **RF-014** | Mock Engine de contingencia (análisis heurístico offline) | `backend/app/services/mock_engine.py` (TTR, burstiness, markers) |
+| **RF-011** | Flash Test en tiempo real con WebSockets y timer circular | `frontend/templates/flashtest.html`, `websocket_mgr.py` |
+| **RF-012** | Panel de resultados docente en vivo (% Logro, IA, Citas) | `frontend/templates/index.html`, `backend/app/routers/panel.py` |
+| **RF-013** | Citación a defensa oral y confirmación justificada de logro | `backend/app/routers/panel.py` (`Cita`, `AuditLog`) |
+| **RF-014** | Mock Engine heurístico de contingencia (offline) | `backend/app/services/mock_engine.py` (TTR, burstiness, markers) |
 | **RF-015** | Autenticación docente con bcrypt factor $\ge 12$ y JWT | `backend/app/auth.py`, `backend/app/routers/auth.py` |
-| **RNF-001** | Concurrencia WebSocket latencia $\le 50$ms | `backend/app/services/websocket_mgr.py` |
-| **RNF-002** | Tiempo análisis informe $\le 15$s CPU | Optimizado con `pymupdf4llm` y heurísticas lineales |
-| **RNF-003** | Cierre de calificaciones en API $\le 200$ms | Endpoint `POST /api/asignaturas/{id}/cerrar-nota` directo |
-| **RNF-004** | Tokens de acceso UUIDv4 (RFC 4122) | Generación nativa `uuid.uuid4()` con vigencia 48h |
-| **RNF-005** | Contraseñas bcrypt factor $\ge 12$ | `bcrypt.gensalt(rounds=12)` en `backend/app/auth.py` |
-| **RNF-006** | Control de acceso RBAC por asignatura | `check_course_access()` en `backend/app/auth.py` |
-| **RNF-007** | Fallback a Mock Engine si timeout $> 30$s | Timeout configurado en `backend/app/services/llm_service.py` |
-| **RNF-008** | Resiliencia de reconexión WebSocket $\le 120$s | Estado y respuestas preservados en `FlashTestSession` |
-| **RNF-009** | Usabilidad WCAG 2.1 AA y modo oscuro/claro | Estilos en `frontend/static/css/style.css` |
-| **RNF-013** | Cumplimiento Ley N° 21.719 (Privacidad y Auditoría Chile) | Tabla `audit_logs` inmutable, minimización de datos personales |
-| **RN-001** | Token de acceso único válido por 48 horas | Validación en `routers/flash_test.py` |
-| **RN-002** | Expiración de 60s/test con registro de respuestas parciales | Implementado en cliente y servidor |
-| **RN-003** | Umbrales parametrizables en `Asignatura.parametros` | Almacenamiento JSON en `models.py` |
-| **RN-004** | Nota editable con justificación obligatoria y auditoría | Campo obligatorio en cierre de nota (`flash_tests`) |
+| **RNF-001** | Concurrencia WebSocket con latencia $\le 50$ms | `backend/app/services/websocket_mgr.py` |
+| **RNF-002** | Extracción semántica de informe $\le 15$s CPU | Motor optimizado con `PyMuPDF` |
+| **RNF-003** | Confirmación de calificación en API $\le 200$ms | Endpoint `POST /api/asignaturas/{id}/cerrar-nota` directo |
+| **RNF-004** | Tokens de acceso seguro UUIDv4 (RFC 4122) | Generación nativa con vigencia de 48 horas |
+| **RNF-005** | Cifrado de contraseñas bcrypt con factor 12 | `bcrypt.gensalt(rounds=12)` en `auth.py` |
+| **RNF-006** | Control de acceso por roles (Docente, Admin, Ayudante) | `check_course_access()` en `auth.py` |
+| **RNF-008** | Resiliencia y reconexión WebSocket $\le 120$s | Sesión y respuestas en memoria preservadas en `websocket_mgr.py` |
+| **RNF-009** | Accesibilidad WCAG 2.1 AA y soporte Modo Oscuro/Claro | Variables CSS, alto contraste y selector de tema en vivo |
+| **RNF-013** | Trazabilidad inmutable de auditoría (Ley N° 21.719) | Tabla `audit_logs` con registro de diferencias JSON |
+| **RN-001** | Tokens con expiración estricta de 48 horas | Validación en base de datos y endpoints públicos |
+| **RN-002** | Cronómetro por pregunta con envío reactivo | Timeout automático en frontend y backend |
+| **RN-003** | Umbrales parametrizables por cátedra | Almacenamiento JSON configurable en `Asignatura` |
+| **RN-004** | Registro obligatorio de justificación pedagógica | Campo auditado en cada cierre de evaluación |
 
 ---
 
-## 3. Estructura Exacta del Anexo A (RF-007)
+## 3. Estructura del Anexo A (Evaluación Estandarizada)
 
-El sistema genera y persiste evaluaciones que cumplen estrictamente con la estructura JSON del blueprint:
+Cada informe procesado genera un desglose pedagógico en formato JSON estandarizado:
+
 ```json
 {
-  "porcentaje_logro": "65%",
+  "porcentaje_logro": "87%",
   "feedback": {
-    "fortalezas": ["Buena estructura", "Argumentos sólidos en sección 2"],
-    "debilidades": ["Falta profundidad en metodología", "Citas incompletas"],
-    "recomendaciones": ["Ampliar sección de resultados", "Revisar formato APA"]
+    "fortalezas": [
+      "Estructura general organizada con secciones claramente delimitadas",
+      "Integración de conceptos teóricos relevantes para el problema abordado"
+    ],
+    "debilidades": [
+      "Profundidad metodológica mejorable y detalle de validación experimental",
+      "Citas bibliográficas y justificación de fuentes requieren mayor exhaustividad"
+    ],
+    "recomendaciones": [
+      "Ampliar la sección de discusión técnica con resultados comparativos",
+      "Revisar el formato y contextualización de la bibliografía según norma"
+    ]
   },
   "deteccion_ia": {
-    "porcentaje": "45%",
-    "nivel_confianza": "medio",
-    "secciones_sospechosas": ["Introducción", "Conclusiones"],
-    "justificacion": "Estilo uniforme, falta de variabilidad léxica"
+    "porcentaje": "18%",
+    "nivel_confianza": "baja",
+    "secciones_sospechosas": [],
+    "justificacion": "Variabilidad estilística natural, uso de terminología técnica situada y ritmo de redacción humano"
   },
   "desglose_rubrica": {
-    "contenido": "60%",
-    "estructura": "70%",
-    "ortografia": "65%"
+    "contenido": "83%",
+    "estructura": "91%",
+    "ortografia": "89%"
   },
   "evaluacion_respuestas": {
     "nivel_rigor_aplicado": "medium",
-    "porcentaje_coherencia": "70%",
-    "respuestas_correctas": "7/10",
-    "preguntas_falladas": [
-      "P3: Explicar metodología utilizada",
-      "P8: Justificar elección de muestra"
-    ],
-    "observacion_ia": "El estudiante demuestra comprensión parcial del contenido. Se recomienda interrogación oral focalizada.",
-    "requiere_defensa_oral": true
+    "porcentaje_coherencia": "88%",
+    "respuestas_correctas": "9/10",
+    "preguntas_falladas": [],
+    "observacion_ia": "El informe presenta coherencia metodológica y consistencia argumental adecuada.",
+    "requiere_defensa_oral": false
   }
 }
 ```
 
 ---
 
-## 4. Estructura del Proyecto
+## 4. Arquitectura de Archivos del Proyecto
 
 ```
 integry/
 ├── backend/
 │   ├── app/
-│   │   ├── config.py              # Configuración y variables de entorno
-│   │   ├── database.py            # Conexión SQLAlchemy y motor
-│   │   ├── models.py              # Entidades completas del Blueprint (Usuario, Asignatura, etc.)
-│   │   ├── schemas.py             # Esquemas Pydantic v2 (Anexo A estandarizado)
-│   │   ├── auth.py                # Bcrypt factor 12, JWT y RBAC
-│   │   ├── audit.py               # Auditoría inmutable de trazabilidad
-│   │   ├── main.py                # Aplicación FastAPI, WebSockets y rutas
+│   │   ├── config.py              # Configuración Pydantic Settings y variables .env
+│   │   ├── database.py            # Motor SQLAlchemy y sesión de base de datos SQLite
+│   │   ├── models.py              # Modelos ORM (Usuario, Asignatura, Estudiante, etc.)
+│   │   ├── schemas.py             # Esquemas Pydantic v2 (Anexo A, DTOs, filtros)
+│   │   ├── auth.py                # Bcrypt factor 12, JWT y control de acceso (RBAC)
+│   │   ├── audit.py               # Trazabilidad inmutable de auditoría (Ley N° 21.719)
+│   │   ├── main.py                # Aplicación FastAPI, lifespan, CORS y montaje estático
 │   │   ├── services/
-│   │   │   ├── pdf_service.py     # Extracción semántica con PyMuPDF / pymupdf4llm
-│   │   │   ├── mock_engine.py     # Motor heurístico contingencia (RF-014)
-│   │   │   ├── llm_service.py     # Integración Ollama / OpenAI / Claude / Mock
-│   │   │   ├── email_service.py   # Despacho Gmail SMTP con aiosmtplib (RF-010)
-│   │   │   └── websocket_mgr.py   # Gestor de conexiones y temporizador en tiempo real
+│   │   │   ├── pdf_service.py     # Extracción semántica Markdown con PyMuPDF
+│   │   │   ├── mock_engine.py     # Heurísticas de lenguaje natural (TTR, burstiness, markers)
+│   │   │   ├── llm_service.py     # Orquestador multi-proveedor LLM con fallback automático
+│   │   │   ├── email_service.py   # Despacho Gmail SMTP reactivo (aiosmtplib)
+│   │   │   └── websocket_mgr.py   # Gestión de sesiones WebSocket en tiempo real
 │   │   └── routers/
-│   │       ├── auth.py            # Login, registro y me
-│   │       ├── asignaturas.py     # CRUD asignaturas y parámetros
-│   │       ├── estudiantes.py     # Ingesta CSV con detección de duplicados
-│   │       ├── materiales.py      # Carga de syllabus y rúbricas
+│   │       ├── auth.py            # Endpoints de autenticación (/login, /register, /me)
+│   │       ├── asignaturas.py     # CRUD de asignaturas y configuración de parámetros
+│   │       ├── estudiantes.py     # Ingesta masiva CSV de estudiantes con deduplicación
+│   │       ├── materiales.py      # Subida de syllabus y rúbricas (Markdown)
 │   │       ├── trabajos.py        # Subida individual/lote de PDFs y evaluación
-│   │       ├── preguntas.py       # Edición y selección del pool de preguntas
-│   │       ├── flash_test.py      # Despacho de tokens y WebSocket del test
-│   │       ├── panel.py           # Dashboard docente, citas y cierre de nota
-│   │       └── audit.py           # Consulta de auditoría inmutable
+│   │       ├── preguntas.py       # Pool de preguntas y selección docente
+│   │       ├── flash_test.py      # Despacho de tokens y WebSocket de interrogación
+│   │       ├── panel.py           # Dashboard docente, citas y confirmación de logro
+│   │       └── audit.py           # Consulta de bitácora de auditoría inmutable
 │   └── tests/
-│       ├── conftest.py            # Fixtures de BD en memoria y cliente
-│       ├── test_auth.py           # Tests de bcrypt, JWT y login
-│       ├── test_csv_parser.py     # Tests de delimitadores y duplicados en CSV
-│       ├── test_evaluation_engine.py # Tests de Anexo A y pool de preguntas
-│       └── test_flash_test.py     # Test de flujo completo (despacho -> test -> cierre)
+│       ├── conftest.py            # Fixtures de BD en memoria (SQLite StaticPool)
+│       ├── test_auth.py           # Pruebas de hash, JWT y roles
+│       ├── test_csv_parser.py     # Pruebas de delimitadores y duplicados en CSV
+│       ├── test_evaluation_engine.py # Pruebas del motor de evaluación y Anexo A
+│       └── test_flash_test.py     # Prueba del flujo completo Flash Test
 ├── frontend/
 │   ├── static/
 │   │   ├── css/
-│   │   │   └── style.css          # Estilos accesibles WCAG 2.1 AA (Modo Oscuro/Claro)
+│   │   │   └── style.css          # Design System v2 (Variables, Dark Mode, SaaS components)
 │   │   └── js/
-│   │       └── app.js             # Lógica reactiva SPA y WebSocket del docente
+│   │       └── app.js             # SPA reactiva, WebSocket docente, modales y toast system
 │   └── templates/
-│       ├── index.html             # Portal del docente (Dashboard, Nómina, Materiales, etc.)
-│       └── flashtest.html         # Interfaz en tiempo real para estudiantes (Sin login)
+│       ├── index.html             # Portal Docente / Admin / Ayudante con demo cards
+│       └── flashtest.html         # Vista del estudiante para Flash Test en tiempo real
 ├── sample_data/
-│   ├── nomina_estudiantes.csv     # Nómina de prueba con 10 estudiantes
-│   ├── syllabus_info1197.md       # Syllabus de ejemplo para contexto
-│   ├── carlos_alumno_informe_final.pdf # PDF de informe académico para pruebas
-│   └── create_sample_pdf.py       # Generador de PDFs de prueba
+│   ├── nomina_estudiantes.csv     # Nómina de prueba de 10 estudiantes
+│   ├── syllabus_info1197.md       # Syllabus de prueba para contexto de IA
+│   ├── carlos_alumno_informe_final.pdf # Informe de prueba para extracción y evaluación
+│   └── create_sample_pdf.py       # Utilidad generadora de PDFs sintéticos
 ├── .env.example                   # Plantilla de variables de entorno
-├── .env                           # Variables de entorno locales
-├── pytest.ini                     # Configuración de pytest
-├── requirements.txt               # Dependencias del proyecto
-└── run.py                         # Script de inicio rápido
+├── .gitignore                     # Exclusión de venv, db y archivos temporales
+├── pytest.ini                     # Configuración de tests automatizados
+├── requirements.txt               # Dependencias Python
+├── run.py                         # Lanzador con soporte UTF-8 para consola Windows
+└── seed_demo_data.py              # Script generador de datos de demostración completos
 ```
 
 ---
 
 ## 5. Puesta en Marcha Rápida (Quickstart)
 
-### Requisitos Previos
-* Python 3.10+ (probado y verificado en Python 3.13)
-* Navegador web moderno
+### Requisitos
+* Python 3.10 o superior (verificado en Python 3.13)
+* Navegador web moderno (Chrome, Firefox, Edge, Safari)
 
-### Instalación y Ejecución
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/blosttt/IntegriEval.git
+cd IntegriEval
+```
 
-1. **Activar el entorno virtual e instalar dependencias:**
-   ```powershell
-   # En Windows PowerShell
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+### 2. Configurar entorno virtual e instalar dependencias
+```powershell
+# En Windows (PowerShell)
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-2. **Ejecutar la suite de pruebas automatizadas:**
-   ```powershell
-   .venv\Scripts\pytest -v
-   ```
-   *Todos los 9 tests unitarios e integrados pasan exitosamente.*
+### 3. Ejecutar suite de pruebas unitarias
+```powershell
+.venv\Scripts\pytest -v
+```
+*Los 9 tests automatizados cubren autenticación, delimitadores CSV, evaluación Anexo A y ciclo de vida de Flash Test.*
 
-3. **Iniciar el servidor:**
-   ```powershell
-   .venv\Scripts\python run.py
-   ```
+### 4. Cargar datos de demostración (Opcional pero recomendado)
+Para poblar la base de datos con 10 estudiantes, informes evaluados, Flash Tests con respuestas simuladas y citas de defensa:
+```powershell
+.venv\Scripts\python seed_demo_data.py
+```
 
-4. **Acceder a la aplicación:**
-   * **Portal del Docente:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-     * **Credenciales por defecto:** `docente@universidad.cl` / `Docente123!`
-   * **Documentación Interactiva Swagger / OpenAPI:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+### 5. Iniciar la aplicación
+```powershell
+.venv\Scripts\python run.py
+```
+El servidor quedará disponible en: **`http://127.0.0.1:8000`**
 
 ---
 
-## 6. Flujo de Trabajo Demostrativo
+## 6. Credenciales de Demostración
 
-1. **Gestión de Nómina (RF-002):**
-   * Vaya a la pestaña **👥 Nómina (CSV)**.
-   * Arrastre el archivo `sample_data/nomina_estudiantes.csv` para cargar los alumnos del curso.
-2. **Contexto Pedagógico (RF-004):**
-   * Vaya a **📚 Materiales de Apoyo**.
-   * Suba `sample_data/syllabus_info1197.md` con el rol *Syllabus / Programa*.
-3. **Carga y Evaluación de Informe (RF-005, RF-006, RF-007):**
-   * Vaya a **📄 Ingesta de Informes (PDF)**.
-   * Seleccione a *Carlos Alumno Pérez* y suba el archivo `sample_data/carlos_alumno_informe_final.pdf`.
-   * El sistema extraerá el contenido estructurado en Markdown y ejecutará el análisis heurístico con formato Anexo A y generación de 15 preguntas contextuales.
-4. **Pool y Despacho (RF-008, RF-009, RF-010):**
-   * Vaya a **❓ Pool de Preguntas & Despacho**. Seleccione las preguntas preferidas.
-   * Presione **🚀 Despachar Flash Tests**. Se generarán los tokens `UUIDv4` únicos (48h).
-5. **Verificación Flash del Estudiante (RF-011, RN-001, RN-002):**
-   * Abra en una pestaña incógnito el enlace generado (ej: `http://127.0.0.1:8000/test/<token>`).
-   * Observe el temporizador regresivo de 60 segundos por WebSocket, responda las preguntas y envíe.
-6. **Decisión Docente y Cierre (RF-012, RF-013, RN-004):**
-   * En **📊 Panel de Resultados**, vea las métricas actualizadas en tiempo real.
-   * Si requiere defensa oral, presione **📅 Citar**.
-   * Presione **✍ Calificar** para fijar la nota definitiva (1.0 - 7.0) con justificación obligatoria.
-   * En **🛡️ Auditoría Inmutable**, verifique la trazabilidad del cambio.
+La pantalla de bienvenida incluye **tarjetas de acceso rápido de un clic** para los distintos roles:
+
+| Rol | Correo | Contraseña | Alcance y Permisos |
+|---|---|---|---|
+| 🎓 **Docente** | `docente@universidad.cl` | `Docente123!` | Gestión de nómina, informes, pool de preguntas, citas y cierre de logro |
+| ⚙️ **Administrador** | `admin@universidad.cl` | `Admin123!` | Supervisión global de asignaturas y bitácora de auditoría completa |
+| 🤝 **Ayudante** | `ayudante@universidad.cl` | `Ayudante123!` | Apoyo en revisión de entregas y consulta de panel |
+
+### ⚡ Acceso de Estudiantes (Flash Test)
+Los estudiantes **no inician sesión**. Acceden directamente mediante el token único despachado a su correo:
+* **Carlos Alumno (Flash 88% - Logro Confirmado):** `http://127.0.0.1:8000/test/demo-token-carlos-001`
+* **Pedro González (Sospecha IA 71% - Requiere Defensa Oral):** `http://127.0.0.1:8000/test/demo-token-pedro-003`
+* **Felipe Araya (Flash Test Pendiente en Vivo):** `http://127.0.0.1:8000/test/demo-token-felipe-007`
+
+---
+
+## 7. Flujo Operativo del Docente
+
+```mermaid
+flowchart TD
+    A["👥 Cargar Nómina CSV<br/>(Detección de duplicados)"] --> B["📚 Subir Syllabus y Rúbricas<br/>(Contexto para IA)"]
+    B --> C["📄 Ingesta de Informes PDF<br/>(Extracción PyMuPDF)"]
+    C --> D["🤖 Generación Anexo A<br/>(% Logro + Sospecha IA + Pool Preguntas)"]
+    D --> E["❓ Selección de Preguntas & Despacho<br/>(Tokens UUIDv4 por 48 horas)"]
+    E --> F["⚡ Estudiante responde Flash Test<br/>(60s por WebSocket en tiempo real)"]
+    F --> G{"📊 Panel de Decisiones<br/>¿Coherencia < 60% o Alerta IA?"}
+    G -- Sí --> H["📅 Agendar Defensa Oral Presencial"]
+    G -- No --> I["✓ Confirmar % de Logro Definitivo"]
+    H --> I
+    I --> J["🛡️ Registro en Auditoría Inmutable<br/>(Ley N° 21.719)"]
+```
+
+---
+
+## 8. Licencia y Créditos
+
+* **Desarrollo:** Proyecto de Título — Escuela de Ingeniería Civil Informática (2026).
+* **Licencia:** MIT License. Código abierto para fines académicos y formativos.
