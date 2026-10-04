@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuestionarios UCT — IntegriEval</title>
+  <script>
+    if (!localStorage.getItem("token")) {
+      window.location.replace("/login");
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Critical Base & Theme — 100% Reliable Render */
+    :root {
+      --bg: #090d16;
+      --surface: #101622;
+      --surface-2: #162032;
+      --surface-3: #1e2c44;
+      --border: #1e3048;
+      --border-strong: #2a4060;
+      --text: #f0f6ff;
+      --text-2: #b8d0f0;
+      --text-muted: #6b8ab0;
+      --brand-blue: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #090d16 !important;
+      color: #f0f6ff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    * { box-sizing: border-box; }
+
+    /* Login Page Exact Layout */
+    .uct-login-page {
+      min-height: 100vh;
+      background: #090d16 !important;
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      color: #f1f5f9;
+    }
+    .uct-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .uct-emblem {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-block;
+      background: conic-gradient(#0284c7 0deg 180deg, #f59e0b 180deg 360deg);
+      box-shadow: 0 0 14px rgba(2, 132, 199, 0.45);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .uct-emblem::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      background: #090d16;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .uct-brand-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .uct-login-card {
+      width: 100%;
+      max-width: 440px;
+      background: #101622 !important;
+      border: 1px solid #1c2638 !important;
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+    .uct-card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 1.75rem;
+      line-height: 1.4;
+    }
+    .uct-auth-btn {
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      margin-bottom: 0.875rem;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+    .uct-btn-prof {
+      background: #112845 !important;
+      color: #38bdf8 !important;
+      border: 1px solid #1e3a5f !important;
+    }
+    .uct-btn-prof:hover {
+      background: #16365d !important;
+      color: #7dd3fc !important;
+      border-color: #2563eb !important;
+      transform: translateY(-1px);
+    }
+    .uct-btn-alum {
+      background: #131c2b !important;
+      color: #e2e8f0 !important;
+      border: 1px solid #233148 !important;
+    }
+    .uct-btn-alum:hover {
+      background: #1a273b !important;
+      color: #ffffff !important;
+      border-color: #3b82f6 !important;
+      transform: translateY(-1px);
+    }
+    .uct-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 1.75rem;
+    }
+    .google-icon-svg {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
+      min-height: 16px !important;
+      max-height: 16px !important;
+      display: inline-block !important;
+      vertical-align: middle !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Modal styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal {
+      background: #101622;
+      border: 1px solid #1e3048;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      color: #f0f6ff;
+      overflow: hidden;
+    }
+    .modal-sm { max-width: 440px; }
+    .modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #1e3048;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .modal-body { padding: 1.25rem; }
+    .modal-footer {
+      padding: 0.85rem 1.25rem;
+      border-top: 1px solid #1e3048;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* Common Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary { background: #3b82f6; color: #fff; border-color: #2563eb; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #162032; color: #b8d0f0; border-color: #1e3048; }
+    .btn-secondary:hover { background: #1e2c44; color: #fff; }
+    .btn-ghost { background: transparent; color: #6b8ab0; border: none; }
+    .btn-ghost:hover { color: #f0f6ff; background: rgba(255,255,255,0.06); }
+    .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.78rem; }
+    .btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 6px; }
+
+    /* Role Badges */
+    .role-badge-gold {
+      background: #fef08a;
+      color: #854d0e;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+    .role-badge-green {
+      background: #bbf7d0;
+      color: #166534;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+    .role-badge-blue {
+      background: #bfdbfe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.02em;
+    }
+  </style>
+  <link rel="stylesheet" href="/static/css/style.css?v=3.2">
+</head>
+<body>
+
+<!-- ── Toast Container ─────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- PORTAL DOCENTE — CUESTIONARIOS UCT                                     -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ── Header (Matching Screenshot 2) ────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- Brand -->
+      <div class="brand" onclick="switchTab('panel')" style="cursor:pointer;">
+        <span class="uct-emblem" style="width:28px;height:28px;"></span>
+        <span class="brand-name" style="font-size:1.05rem;">Cuestionarios UCT</span>
+      </div>
+
+      <!-- Main Portal Navigation Links -->
+      <div style="display:flex;gap:0.35rem;margin-left:0.75rem;">
+        <button class="btn btn-ghost btn-sm" id="topNavDocente" onclick="switchTab('panel')" style="color:var(--text);font-weight:700;">Docente</button>
+        <button class="btn btn-ghost btn-sm" onclick="openStudentDialog()" style="color:var(--text-muted);">Alumno</button>
+      </div>
+
+      <!-- Right controls -->
+      <div class="header-actions">
+        <!-- Course selector -->
+        <div class="course-select-wrap">
+          <span class="course-select-label">Asignatura:</span>
+          <select class="course-select" id="courseSelect" onchange="onCourseChange()">
+            <option>Cargando…</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="showNewCourseModal()" data-tooltip="Nueva asignatura">＋</button>
+        </div>
+
+        <div class="header-divider"></div>
+
+        <!-- User chip with avatar and uppercase name -->
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatarText">SC</div>
+          <span class="user-name" id="userDisplay" style="font-weight:700;font-size:0.78rem;letter-spacing:0.02em;">PROF. SEBASTIÁN CISTERNAS</span>
+          <span id="userRoleBadge" class="role-badge-gold">Administrador</span>
+        </div>
+
+        <!-- Logout button -->
+        <button class="btn btn-ghost btn-icon" onclick="logout()" data-tooltip="Cerrar sesión">
+          <span style="font-size:1.1rem;line-height:1;">⇥</span>
+        </button>
+
+        <!-- Theme toggle -->
+        <button class="btn btn-ghost btn-icon" onclick="toggleTheme()" data-tooltip="Cambiar tema">
+          <span id="headerThemeIcon">🌙</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Dashboard Title & Quick Actions ─────────────────────────────── -->
+  <div class="container" style="padding-top:1.5rem;padding-bottom:0.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <h1 style="font-size:1.65rem;font-weight:800;letter-spacing:-0.03em;color:var(--text);margin-bottom:0.25rem;">
+          Crea, administra y revisa evaluaciones
+        </h1>
+        <p style="font-size:0.85rem;color:var(--text-muted);">
+          Plataforma de evaluación continua, integridad académica y verificación oral flash.
+        </p>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-primary" onclick="switchTab('nomina')" style="padding:0.5rem 1rem;font-size:0.82rem;">
+          <span>＋</span> Nueva Evaluación (Paso 1)
+        </button>
+        <button class="btn btn-secondary" onclick="switchTab('panel')" style="padding:0.5rem 1rem;font-size:0.82rem;">
+          <span>📊</span> Ver Panel en Vivo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Interactive Guided Workflow Stepper ──────────────────────────── -->
+  <div class="container" id="workflowGuideAnchor" style="padding-bottom:0.75rem;">
+    <div class="workflow-guide-box">
+      <div class="workflow-guide-header">
+        <div class="workflow-guide-title">
+          <span>🗺️</span>
+          <span>Ruta Guiada del Docente · Flujo de 5 Pasos para Evaluar</span>
+        </div>
+        <span class="text-xs text-muted" id="wfSummaryText">Haz clic en cada paso para navegar por el ciclo completo de evaluación</span>
+      </div>
+      <div class="workflow-steps-grid">
+        <div class="wf-step-card" id="wfStep1" onclick="switchTab('nomina')">
+          <div>
+            <div class="wf-step-num">Paso 1</div>
+            <div class="wf-step-title"><span>👥</span> Nómina (CSV)</div>
+            <div class="wf-step-desc">Carga la lista de estudiantes para asociar informes automáticamente.</div>
+          </div>
+          <span class="wf-step-badge wf-badge-pending" id="wfBadge1">0 inscritos</span>
+        </div>
+
+        <div class="wf-step-card" id="wfStep2" onclick="switchTab('materiales')">
+          <div>
+            <div class="wf-step-num">Paso 2</div>
+            <div class="wf-step-title"><span>📚</span> Materiales</div>
+            <div class="wf-step-desc">Syllabus y rúbricas; contexto pedagógico para el motor de IA.</div>
+          </div>
+          <span class="wf-step-badge wf-badge-pending" id="wfBadge2">0 materiales</span>
+        </div>
+
+        <div class="wf-step-card" id="wfStep3" onclick="switchTab('evaluacion')">
+          <div>
+            <div class="wf-step-num">Paso 3</div>
+            <div class="wf-step-title"><span>📄</span> Informes (PDF)</div>
+            <div class="wf-step-desc">Ingesta PDF y extracción semántica Anexo A (% Logro e IA).</div>
+          </div>
+          <span class="wf-step-badge wf-badge-pending" id="wfBadge3">0 analizados</span>
+        </div>
+
+        <div class="wf-step-card" id="wfStep4" onclick="switchTab('preguntas')">
+          <div>
+            <div class="wf-step-num">Paso 4</div>
+            <div class="wf-step-title"><span>❓</span> Flash Tests</div>
+            <div class="wf-step-desc">Selecciona preguntas y despacha tokens únicos de 48 horas.</div>
+          </div>
+          <span class="wf-step-badge wf-badge-pending" id="wfBadge4">0 despachados</span>
+        </div>
+
+        <div class="wf-step-card active" id="wfStep5" onclick="switchTab('panel')">
+          <div>
+            <div class="wf-step-num">Paso 5</div>
+            <div class="wf-step-title"><span>📊</span> Panel & % Logro</div>
+            <div class="wf-step-desc">Monitorea en vivo, cita defensas orales y confirma el logro final.</div>
+          </div>
+          <span class="wf-step-badge wf-badge-active" id="wfBadge5">Monitoreo activo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Nav Tabs ─────────────────────────────────────────────────────── -->
+  <nav class="app-nav">
+    <div class="nav-inner">
+      <button class="nav-tab active" data-tab="panel" onclick="switchTab('panel')">
+        <span class="tab-icon">📊</span> Panel
+      </button>
+      <button class="nav-tab" data-tab="nomina" onclick="switchTab('nomina')">
+        <span class="tab-icon">👥</span> Nómina CSV
+      </button>
+      <button class="nav-tab" data-tab="materiales" onclick="switchTab('materiales')">
+        <span class="tab-icon">📚</span> Materiales
+      </button>
+      <button class="nav-tab" data-tab="evaluacion" onclick="switchTab('evaluacion')">
+        <span class="tab-icon">📄</span> Informes PDF
+      </button>
+      <button class="nav-tab" data-tab="preguntas" onclick="switchTab('preguntas')">
+        <span class="tab-icon">❓</span> Preguntas &amp; Despacho
+      </button>
+      <button class="nav-tab" data-tab="auditoria" onclick="switchTab('auditoria')">
+        <span class="tab-icon">🛡️</span> Auditoría
+      </button>
+      <button class="nav-tab" data-tab="config" onclick="switchTab('config')">
+        <span class="tab-icon">⚙️</span> Parámetros
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Content ──────────────────────────────────────────────────────── -->
+  <div class="container" style="padding-top:1.5rem;">
+
+    <!-- ══ TAB 1: Panel ════════════════════════════════════════════════ -->
+    <section id="tabContent_panel">
+      <!-- Contextual Step 5 Guide Banner -->
+      <div class="tab-guide-banner">
+        <div class="tab-guide-text">
+          <div class="tab-guide-title"><span>📊</span> Paso 5 de 5: Monitoreo en Vivo, Defensas Orales y Confirmación Definitiva</div>
+          <div class="tab-guide-desc">Revisa el % de Logro preliminar y los resultados de los Flash Tests en tiempo real. Si existe sospecha de IA (≥ 40%) o baja coherencia, agenda una defensa oral con 📅. Para fijar la evaluación final, haz clic en ✍ y registra el % de Logro justificado.</div>
+        </div>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Panel de Resultados</h2>
+          <p class="page-subtitle">Monitoreo en tiempo real · toma de decisiones pedagógicas</p>
+        </div>
+        <div class="flex gap-2">
+          <select class="form-select" id="filterSelect" onchange="loadPanel()" style="width:auto;">
+            <option value="todos">Todos los estudiantes</option>
+            <option value="defensa">Requieren defensa oral</option>
+            <option value="alerta_ia">Alerta IA ≥ 40 %</option>
+            <option value="cerradas">Evaluaciones cerradas</option>
+          </select>
+          <button class="btn btn-primary" onclick="handleDispatchFlashTests()" id="dispatchBtn">
+            ⚡ Despachar Flash Tests
+          </button>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card c-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statTotalAlumnos">0</div>
+          <div class="stat-label">Total alumnos</div>
+        </div>
+        <div class="stat-card c-cyan">
+          <div class="stat-icon">📄</div>
+          <div class="stat-value" id="statAnalizados">0</div>
+          <div class="stat-label">Informes analizados</div>
+        </div>
+        <div class="stat-card c-red">
+          <div class="stat-icon">🤖</div>
+          <div class="stat-value" id="statAlertaIA">0</div>
+          <div class="stat-label">Alerta sospecha IA</div>
+        </div>
+        <div class="stat-card c-amber">
+          <div class="stat-icon">🎤</div>
+          <div class="stat-value" id="statReqDefensa">0</div>
+          <div class="stat-label">Requieren defensa</div>
+        </div>
+        <div class="stat-card c-green">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="statTestsCompletados">0</div>
+          <div class="stat-label">Flash tests OK</div>
+        </div>
+        <div class="stat-card c-purple">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="statNotasCerradas">0</div>
+          <div class="stat-label">Evaluaciones cerradas</div>
+        </div>
+      </div>
+
+      <!-- Results table -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Estudiantes · Decisiones Docentes</h3>
+          <span class="badge badge-blue" id="wsStatusBadge">● En vivo</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>% Logro</th>
+                <th>Detección IA</th>
+                <th>Flash Test</th>
+                <th>Decisión</th>
+                <th>Defensa oral</th>
+                <th style="width:160px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="panelTableBody">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-title">Cargando panel…</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 2: Nómina ═══════════════════════════════════════════════ -->
+    <section id="tabContent_nomina" style="display:none;">
+      <!-- Contextual Step 1 Guide Banner -->
+      <div class="tab-guide-banner">
+        <div class="tab-guide-text">
+          <div class="tab-guide-title"><span>👥</span> Paso 1 de 5: Carga la Nómina Oficial de Estudiantes</div>
+          <div class="tab-guide-desc">Sube el archivo CSV con las columnas <code>nombre, correo, rut</code>. Esto registrará a los estudiantes en el curso para que sus informes PDF se asocien automáticamente al cargarlos.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm tab-guide-next" onclick="switchTab('materiales')">Siguiente Paso: Subir Materiales →</button>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Nómina de Estudiantes</h2>
+          <p class="page-subtitle">Ingesta masiva por CSV · detección automática de duplicados</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Cargar Nómina CSV</h3>
+        </div>
+        <div class="card-body">
+          <div class="callout callout-blue mb-4">
+            <div class="callout-icon">ℹ️</div>
+            <div class="callout-content">
+              <div class="callout-title">Formato aceptado</div>
+              Columnas requeridas: <code>nombre</code>, <code>correo</code> (opcional: <code>rut</code>).
+              Delimitadores auto-detectados: coma <code>,</code> o punto y coma <code>;</code>.
+            </div>
+          </div>
+          <div class="dropzone" id="csvDropzone" onclick="document.getElementById('csvFileInput').click()">
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCSVUpload(this.files[0])">
+            <div class="dropzone-icon">📋</div>
+            <div class="dropzone-title">Arrastre el archivo .csv o haga clic aquí</div>
+            <div class="dropzone-sub">Máx. 2000 estudiantes por carga</div>
+          </div>
+          <div id="csvUploadStatus" style="margin-top:1rem;font-size:0.85rem;font-weight:600;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Estudiantes Matriculados</h3>
+          <span class="badge badge-gray" id="nominaCount">0 registros</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Nombre</th><th>Correo</th><th>RUT</th><th>Estado informe</th></tr>
+            </thead>
+            <tbody id="nominaTableBody">
+              <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Sin estudiantes cargados</div><div class="empty-sub">Sube el archivo CSV para registrar la nómina del curso</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 3: Materiales ════════════════════════════════════════════ -->
+    <section id="tabContent_materiales" style="display:none;">
+      <!-- Contextual Step 2 Guide Banner -->
+      <div class="tab-guide-banner">
+        <div class="tab-guide-text">
+          <div class="tab-guide-title"><span>📚</span> Paso 2 de 5: Sube el Contexto y Rúbricas de la Asignatura</div>
+          <div class="tab-guide-desc">Carga el programa del curso (Syllabus) o la pauta de evaluación. La IA los convertirá a Markdown y los utilizará para calibrar el rigor pedagógico y contrastar los informes.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm tab-guide-next" onclick="switchTab('evaluacion')">Siguiente Paso: Ingesta de Informes →</button>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Materiales de Apoyo</h2>
+          <p class="page-subtitle">Syllabus, rúbricas y guías → contexto inyectado al motor de IA</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Subir Nuevo Material</h3></div>
+        <div class="card-body">
+          <form onsubmit="handleMaterialUpload(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Nombre del material</label>
+                <input type="text" id="materialNombre" class="form-input" placeholder="Ej: Pauta Proyecto Semestre 2" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo de documento</label>
+                <select id="materialTipo" class="form-select">
+                  <option value="syllabus">Syllabus / Programa</option>
+                  <option value="rubrica">Rúbrica de evaluación</option>
+                  <option value="guia">Guía de trabajo</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Archivo (.pdf, .md, .txt)</label>
+              <input type="file" id="materialFile" class="form-input" accept=".pdf,.md,.txt" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Subir y convertir a Markdown</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Materiales disponibles</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>Tipo</th><th>Caracteres extraídos</th><th>Acciones</th></tr></thead>
+            <tbody id="materialesTableBody">
+              <tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📚</div><div class="empty-title">Sin materiales cargados</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 4: Informes PDF ══════════════════════════════════════════ -->
+    <section id="tabContent_evaluacion" style="display:none;">
+      <!-- Contextual Step 3 Guide Banner -->
+      <div class="tab-guide-banner">
+        <div class="tab-guide-text">
+          <div class="tab-guide-title"><span>📄</span> Paso 3 de 5: Ingesta y Evaluación Semántica de Informes</div>
+          <div class="tab-guide-desc">Sube los informes de tus estudiantes. Puedes arrastrar varios PDFs juntos para asociación masiva automática o usar la carga individual. El sistema generará el Anexo A y el pool de preguntas.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm tab-guide-next" onclick="switchTab('preguntas')">Siguiente Paso: Revisar Preguntas →</button>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Ingesta y Evaluación de Informes</h2>
+          <p class="page-subtitle">Extracción semántica PyMuPDF → análisis heurístico → Anexo A</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Individual -->
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Carga Individual</h3></div>
+          <div class="card-body">
+            <form onsubmit="handleSinglePDFUpload(event)">
+              <div class="form-group">
+                <label class="form-label">Estudiante</label>
+                <select id="singleUploadStudentSelect" class="form-select" required>
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Archivo PDF</label>
+                <input type="file" id="singlePDFFile" class="form-input" accept=".pdf" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-full">Procesar y Evaluar</button>
+              <div id="singlePDFStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Batch -->
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Carga Masiva (Batch)</h3></div>
+          <div class="card-body">
+            <p class="text-sm text-muted mb-4">
+              Asociación automática por nombre de archivo con la nómina cargada (RF-005).
+            </p>
+            <div class="dropzone" onclick="document.getElementById('batchPDFInput').click()">
+              <input type="file" id="batchPDFInput" accept=".pdf" multiple style="display:none;" onchange="handleBatchPDFUpload(this.files)">
+              <div class="dropzone-icon">📦</div>
+              <div class="dropzone-title">Arrastre múltiples PDFs aquí</div>
+              <div class="dropzone-sub">Se asociarán automáticamente por nombre / correo</div>
+            </div>
+            <div id="batchPDFStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 5: Preguntas y Despacho ══════════════════════════════════ -->
+    <section id="tabContent_preguntas" style="display:none;">
+      <!-- Contextual Step 4 Guide Banner -->
+      <div class="tab-guide-banner">
+        <div class="tab-guide-text">
+          <div class="tab-guide-title"><span>❓</span> Paso 4 de 5: Selección de Preguntas y Despacho de Tokens</div>
+          <div class="tab-guide-desc">Selecciona un estudiante para revisar el pool de 15 preguntas generadas sobre su entrega. Elige las que formarán su Flash Test y presiona ⚡ Despachar Flash Tests para generar los enlaces seguros de 48 horas.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm tab-guide-next" onclick="switchTab('panel')">Siguiente Paso: Ver Panel en Vivo →</button>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Pool de Preguntas y Despacho Flash</h2>
+          <p class="page-subtitle">Edita, selecciona y despacha tokens UUIDv4 con vigencia 48 h</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <label class="form-label" style="margin:0;">Estudiante:</label>
+          <select id="poolStudentSelect" class="form-select" onchange="onPoolStudentChange()" style="width:240px;">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+      </div>
+      <div id="questionsPoolContainer">
+        <div class="empty-state">
+          <div class="empty-icon">❓</div>
+          <div class="empty-title">Selecciona un estudiante</div>
+          <div class="empty-sub">Se mostrará el pool de preguntas generadas a partir de su informe evaluado.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 6: Auditoría ═════════════════════════════════════════════ -->
+    <section id="tabContent_auditoria" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Auditoría Inmutable</h2>
+          <p class="page-subtitle">Trazabilidad de acciones · Cumplimiento Ley N° 21.719 (Chile)</p>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAuditoria()">↻ Actualizar</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Acción</th><th>Entidad</th><th>Usuario</th><th>Fecha y hora</th><th>Detalles</th></tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🛡️</div><div class="empty-title">Sin registros aún</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB 7: Parámetros ════════════════════════════════════════════ -->
+    <section id="tabContent_config" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Parámetros de Evaluación</h2>
+          <p class="page-subtitle">Configuración pedagógica por asignatura · RF-003 / RN-003</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:720px;">
+        <div class="card-body">
+          <form onsubmit="handleSaveConfig(event)">
+            <div class="form-group">
+              <label class="form-label">Instrucciones adicionales al motor de IA</label>
+              <textarea id="configPrompt" class="form-textarea" rows="3"
+                placeholder="Ej: Enfocarse en justificación metodológica y cumplimiento de restricciones de diseño…"></textarea>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Nivel de rigor pedagógico</label>
+                <select id="configRigor" class="form-select">
+                  <option value="low">Bajo — Formativo</option>
+                  <option value="medium" selected>Medio — Estándar</option>
+                  <option value="high">Alto — Exigente</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tamaño del pool de preguntas (10–30)</label>
+                <input type="number" id="configPoolSize" class="form-input" min="10" max="30" value="15" required>
+              </div>
+            </div>
+
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">Preguntas por Flash Test</label>
+                <input type="number" id="configNumTest" class="form-input" min="1" max="15" value="5" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Umbral alerta IA (%)</label>
+                <input type="number" id="configUmbralIA" class="form-input" min="0" max="100" value="40" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Umbral coherencia Flash (%)</label>
+                <input type="number" id="configUmbralCoherencia" class="form-input" min="0" max="100" value="60" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tiempo del Flash Test (segundos, mínimo 30)</label>
+              <input type="number" id="configTiempoTest" class="form-input" min="30" max="300" step="5" value="60" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar parámetros</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div><!-- /container -->
+</div><!-- /mainApp -->
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS                                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Anexo A -->
+<div id="anexoAModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('anexoAModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">📋 Desglose Detallado — Anexo A</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('anexoAModal')">✕</button>
+    </div>
+    <div class="modal-body" id="anexoAContainer"></div>
+  </div>
+</div>
+
+<!-- Cita defensa oral -->
+<div id="citaModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('citaModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">📅 Agendar Defensa Oral</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('citaModal')">✕</button>
+    </div>
+    <form onsubmit="submitCita(event)">
+      <div class="modal-body">
+        <input type="hidden" id="citaStudentId">
+        <div class="callout callout-amber mb-4">
+          <div class="callout-icon">⚠️</div>
+          <div>Citando a: <strong id="citaStudentName"></strong></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de la interrogación</label>
+          <input type="date" id="citaDate" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bloque horario (ej: 10:00 - 10:15)</label>
+          <input type="text" id="citaBloque" class="form-input" value="10:00 - 10:15" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acuerdos y focos de pregunta</label>
+          <textarea id="citaAcuerdos" class="form-textarea" rows="2" placeholder="Preguntar sobre la metodología de la sección 3…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('citaModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Confirmar cita</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Cierre de evaluacion / % Logro -->
+<div id="cierreModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('cierreModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">✍ Confirmación de % Logro Final</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('cierreModal')">✕</button>
+    </div>
+    <form onsubmit="submitCierreNota(event)">
+      <div class="modal-body">
+        <input type="hidden" id="cierreStudentId">
+        <p class="text-sm text-muted mb-4">Estudiante: <strong id="cierreStudentName" class="text-sm" style="color:var(--text)"></strong></p>
+        <div class="form-group">
+          <label class="form-label">% de Logro Final (0% – 100%)</label>
+          <input type="number" id="cierreLogro" class="form-input" min="0" max="100" step="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Justificación del docente (obligatoria · RN-004)</label>
+          <textarea id="cierreJustificacion" class="form-textarea" rows="3" required></textarea>
+          <p class="text-xs text-muted mt-1">Este campo queda registrado en la auditoría inmutable.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('cierreModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Registrar evaluación definitiva</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Dispatch links -->
+<div id="dispatchModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('dispatchModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">⚡ Flash Tests Despachados — Enlaces Tokenizados</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('dispatchModal')">✕</button>
+    </div>
+    <div class="modal-body" id="dispatchLinksContainer"></div>
+  </div>
+</div>
+
+<!-- Markdown preview -->
+<div id="markdownModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('markdownModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">📄 Contenido Markdown Extraído</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('markdownModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <pre id="markdownPreviewBody" style="white-space:pre-wrap;font-size:0.78rem;font-family:'JetBrains Mono',monospace;background:var(--surface-2);padding:1rem;border-radius:var(--r-md);overflow-x:auto;"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Nueva asignatura -->
+<div id="newCourseModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('newCourseModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">＋ Nueva Asignatura</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('newCourseModal')">✕</button>
+    </div>
+    <form onsubmit="handleCreateCourse(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" id="newCourseNombre" class="form-input" placeholder="Ej: INFO1197 - Proyecto" required>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Período</label>
+            <input type="text" id="newCoursePeriodo" class="form-input" value="Semestre 2" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Año</label>
+            <input type="number" id="newCourseAno" class="form-input" value="2026" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newCourseModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Audit diff -->
+<div id="auditModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('auditModal')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">🛡️ Diferencias del Registro Auditado</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('auditModal')">✕</button>
+    </div>
+    <div class="modal-body" id="auditDiffBody"></div>
+  </div>
+</div>
+
+<!-- Student access dialog modal -->
+<div id="studentDialogModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('studentDialogModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 class="modal-title">⚡ Portal del Estudiante — Flash Test</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('studentDialogModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-3">Los estudiantes acceden directamente con su token personalizado sin necesidad de contraseña.</p>
+      
+      <div class="form-group mb-3">
+        <label class="form-label text-xs">Ingresar token de Flash Test (UUID)</label>
+        <div style="display:flex;gap:0.4rem;">
+          <input type="text" id="manualStudentToken" class="form-input text-xs" placeholder="ej: demo-token-carlos-001">
+          <button class="btn btn-primary btn-sm" onclick="goToManualStudentTest()">Ir al Test</button>
+        </div>
+      </div>
+
+      <p class="text-xs font-bold text-muted mb-2" style="text-transform:uppercase;letter-spacing:0.04em;">Tokens de demostración activos:</p>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        <a href="/test/demo-token-carlos-001" target="_blank" class="btn btn-secondary btn-sm" style="justify-content:flex-start;text-decoration:none;">
+          <span style="color:var(--success);">✓</span>
+          <div>
+            <div style="font-weight:600;font-size:0.78rem;">Carlos Alumno Pérez</div>
+            <div class="text-xs text-muted">Flash 88% — Logro 88% Confirmado</div>
+          </div>
+        </a>
+        <a href="/test/demo-token-pedro-003" target="_blank" class="btn btn-secondary btn-sm" style="justify-content:flex-start;text-decoration:none;">
+          <span style="color:var(--danger);">⚠️</span>
+          <div>
+            <div style="font-weight:600;font-size:0.78rem;">Pedro González Tapia</div>
+            <div class="text-xs text-muted">Alerta IA 71% — Flash 38% (Defensa Oral)</div>
+          </div>
+        </a>
+        <a href="/test/demo-token-felipe-007" target="_blank" class="btn btn-secondary btn-sm" style="justify-content:flex-start;text-decoration:none;">
+          <span style="color:var(--brand-blue);">⏱️</span>
+          <div>
+            <div style="font-weight:600;font-size:0.78rem;">Felipe Araya Núñez</div>
+            <div class="text-xs text-muted">Flash Test Pendiente por responder</div>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('studentDialogModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js?v=3.2"></script>
+</body>
+</html>
+

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuestionarios UCT — Iniciar Sesión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Reset & Theme */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #090d16;
+      --surface: #101622;
+      --surface-2: #162032;
+      --surface-3: #1e2c44;
+      --border: #1e3048;
+      --text: #f0f6ff;
+      --text-muted: #6b8ab0;
+      --brand-blue: #3b82f6;
+      --brand-blue-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Brand Header */
+    .uct-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      user-select: none;
+    }
+
+    .uct-emblem {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: inline-block;
+      background: conic-gradient(#0284c7 0deg 180deg, #f59e0b 180deg 360deg);
+      box-shadow: 0 0 16px rgba(2, 132, 199, 0.45);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .uct-emblem::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      background: #090d16;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .uct-brand-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+
+    /* Central Login Card */
+    .uct-login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid #1c2638;
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+
+    .uct-card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 1.75rem;
+      line-height: 1.4;
+    }
+
+    /* Action Buttons */
+    .uct-auth-btn {
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      margin-bottom: 0.875rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+
+    .uct-btn-prof {
+      background: #112845;
+      color: #38bdf8;
+      border-color: #1e3a5f;
+    }
+
+    .uct-btn-prof:hover {
+      background: #16365d;
+      color: #7dd3fc;
+      border-color: #2563eb;
+      transform: translateY(-1px);
+    }
+
+    .uct-btn-alum {
+      background: #131c2b;
+      color: #e2e8f0;
+      border-color: #233148;
+    }
+
+    .uct-btn-alum:hover {
+      background: #1a273b;
+      color: #ffffff;
+      border-color: #3b82f6;
+      transform: translateY(-1px);
+    }
+
+    /* Sub-buttons and Form Controls */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      width: 100%;
+    }
+
+    .btn-secondary {
+      background: #162032;
+      color: #b8d0f0;
+      border-color: #1e3048;
+    }
+
+    .btn-secondary:hover {
+      background: #1e2c44;
+      color: #ffffff;
+    }
+
+    .btn-primary {
+      background: var(--brand-blue);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--brand-blue-hover);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #64748b;
+      border: none;
+    }
+
+    .btn-ghost:hover {
+      color: #94a3b8;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid #1e3048;
+      color: #f1f5f9;
+      padding: 0.55rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--brand-blue);
+    }
+
+    /* Google Guarantee */
+    .uct-guarantee {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 1.75rem;
+    }
+
+    .google-icon-svg {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+      max-width: 16px !important;
+      min-height: 16px !important;
+      max-height: 16px !important;
+      display: inline-block !important;
+      vertical-align: middle !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      padding: 0.75rem 1.25rem;
+      background: #1e2c44;
+      color: #f1f5f9;
+      border-radius: 8px;
+      border: 1px solid #2a4060;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 2000;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-card {
+      background: #101622;
+      border: 1px solid #1e3048;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+      color: #f0f6ff;
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #1e3048;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-body {
+      padding: 1.25rem;
+    }
+  </style>
+
+  <script>
+    // Si ya existe token válido, redirigir automáticamente al portal
+    if (localStorage.getItem("token")) {
+      window.location.replace("/");
+    }
+  </script>
+</head>
+<body>
+
+  <div id="toast"></div>
+
+  <!-- Brand logo header -->
+  <div class="uct-brand-header">
+    <span class="uct-emblem"></span>
+    <span class="uct-brand-title">Cuestionarios UCT</span>
+  </div>
+
+  <!-- Central Login Card -->
+  <div class="uct-login-card">
+    <h1 class="uct-card-title">Inicia sesión con tu cuenta institucional</h1>
+
+    <!-- Action 1: Entrar como profesor -->
+    <button type="button" class="uct-auth-btn uct-btn-prof" onclick="loginDirect('docente@universidad.cl', 'Docente123!', this, 'Profesor')">
+      <span>Entrar como profesor</span>
+    </button>
+
+    <!-- Action 2: Entrar como alumno -->
+    <button type="button" class="uct-auth-btn uct-btn-alum" onclick="openStudentModal()">
+      <span>Entrar como alumno</span>
+    </button>
+
+    <!-- Expandable Options (Admin / Ayudante / Manual) -->
+    <div style="margin-top:0.6rem;margin-bottom:0.25rem;">
+      <button type="button" class="btn btn-ghost" onclick="toggleAdvanced()" style="font-size:0.75rem;padding:0.4rem 0;">
+        <span>Otras opciones (Admin, Ayudante, Credenciales)</span> <span id="advArrow">▼</span>
+      </button>
+
+      <div id="advancedBox" style="display:none;margin-top:0.75rem;padding:0.85rem;background:#131c2b;border:1px solid #1f2d42;border-radius:10px;text-align:left;">
+        <p style="font-size:0.68rem;font-weight:700;color:#6b8ab0;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Accesos directos por rol:</p>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.85rem;">
+          <button type="button" class="btn btn-secondary" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginDirect('admin@universidad.cl', 'Admin123!', this, 'Administrador')">
+            <span style="font-size:1rem;">⚙️</span>
+            <div>
+              <div style="font-weight:600;font-size:0.76rem;color:#f1f5f9;">Administrador Sistema</div>
+              <div style="font-size:0.68rem;color:#6b8ab0;">admin@universidad.cl</div>
+            </div>
+          </button>
+          <button type="button" class="btn btn-secondary" style="justify-content:flex-start;padding:0.45rem 0.65rem;" onclick="loginDirect('ayudante@universidad.cl', 'Ayudante123!', this, 'Ayudante')">
+            <span style="font-size:1rem;">🤝</span>
+            <div>
+              <div style="font-weight:600;font-size:0.76rem;color:#f1f5f9;">Ana Ayudante González</div>
+              <div style="font-size:0.68rem;color:#6b8ab0;">ayudante@universidad.cl</div>
+            </div>
+          </button>
+        </div>
+
+        <p style="font-size:0.68rem;font-weight:700;color:#6b8ab0;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;border-top:1px solid #1e3048;padding-top:0.5rem;">Ingreso manual:</p>
+        <form onsubmit="handleManualLogin(event)">
+          <div style="margin-bottom:0.5rem;">
+            <label style="display:block;font-size:0.72rem;color:#94a3b8;margin-bottom:0.2rem;">Correo</label>
+            <input type="email" id="manualEmail" class="form-input" placeholder="nombre@universidad.cl" required>
+          </div>
+          <div style="margin-bottom:0.65rem;">
+            <label style="display:block;font-size:0.72rem;color:#94a3b8;margin-bottom:0.2rem;">Contraseña</label>
+            <input type="password" id="manualPassword" class="form-input" placeholder="••••••••" required>
+          </div>
+          <button type="submit" id="btnManualSubmit" class="btn btn-primary">Iniciar sesión</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Google guarantee footer -->
+    <div class="uct-guarantee">
+      <span>Seguridad y privacidad garantizadas por</span>
+      <svg class="google-icon-svg" viewBox="0 0 24 24" width="16" height="16">
+        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.665-5.17 3.665-9.12z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.26 21.36 7.33 24 12 24z"/>
+        <path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.13z"/>
+        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Student Dialog Modal -->
+  <div id="studentModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeStudentModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size:0.95rem;font-weight:700;">⚡ Portal del Estudiante — Flash Test</h3>
+        <button type="button" class="btn btn-ghost" style="width:auto;padding:0.2rem 0.5rem;font-size:1rem;" onclick="closeStudentModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.8rem;color:#6b8ab0;margin-bottom:1rem;">Ingresa tu token de evaluación o prueba uno de los estudiantes de muestra:</p>
+
+        <div style="margin-bottom:1.25rem;">
+          <label style="display:block;font-size:0.72rem;color:#94a3b8;margin-bottom:0.25rem;">Token de Flash Test (UUID)</label>
+          <div style="display:flex;gap:0.4rem;">
+            <input type="text" id="studentTokenInput" class="form-input" placeholder="ej: demo-token-carlos-001">
+            <button type="button" class="btn btn-primary" style="width:auto;white-space:nowrap;" onclick="goToStudentTest()">Ir al Test</button>
+          </div>
+        </div>
+
+        <p style="font-size:0.68rem;font-weight:700;color:#6b8ab0;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem;">Estudiantes de demostración:</p>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <a href="/test/demo-token-carlos-001" target="_blank" class="btn btn-secondary" style="justify-content:flex-start;">
+            <span style="color:#10b981;">✓</span>
+            <div>
+              <div style="font-weight:600;font-size:0.78rem;color:#f1f5f9;">Carlos Alumno Pérez</div>
+              <div style="font-size:0.68rem;color:#6b8ab0;">Flash 88% — Logro 88% Confirmado</div>
+            </div>
+          </a>
+          <a href="/test/demo-token-pedro-003" target="_blank" class="btn btn-secondary" style="justify-content:flex-start;">
+            <span style="color:#ef4444;">⚠️</span>
+            <div>
+              <div style="font-weight:600;font-size:0.78rem;color:#f1f5f9;">Pedro González Tapia</div>
+              <div style="font-size:0.68rem;color:#6b8ab0;">Alerta IA 71% — Flash 38% (Defensa Oral)</div>
+            </div>
+          </a>
+          <a href="/test/demo-token-felipe-007" target="_blank" class="btn btn-secondary" style="justify-content:flex-start;">
+            <span style="color:#38bdf8;">⏱️</span>
+            <div>
+              <div style="font-weight:600;font-size:0.78rem;color:#f1f5f9;">Felipe Araya Núñez</div>
+              <div style="font-size:0.68rem;color:#6b8ab0;">Flash Test Pendiente por responder</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 3500);
+    }
+
+    function toggleAdvanced() {
+      const box = document.getElementById("advancedBox");
+      const isHidden = box.style.display === "none";
+      box.style.display = isHidden ? "block" : "none";
+      document.getElementById("advArrow").textContent = isHidden ? "▲" : "▼";
+    }
+
+    function openStudentModal() {
+      document.getElementById("studentModal").style.display = "flex";
+    }
+
+    function closeStudentModal() {
+      document.getElementById("studentModal").style.display = "none";
+    }
+
+    function goToStudentTest() {
+      const token = document.getElementById("studentTokenInput").value.trim();
+      if (!token) {
+        showToast("Por favor ingresa un token válido.");
+        return;
+      }
+      window.open(`/test/${token}`, "_blank");
+    }
+
+    async function loginDirect(email, password, btnElement, roleName) {
+      const prevHTML = btnElement.innerHTML;
+      btnElement.innerHTML = `<span>⏳ Conectando como ${roleName}…</span>`;
+      btnElement.disabled = true;
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo: email, contrasena: password })
+        });
+        
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Credenciales inválidas" }));
+          throw new Error(err.detail || "Error en el ingreso");
+        }
+
+        const data = await res.json();
+        localStorage.setItem("token", data.access_token);
+        // Redirigir de inmediato al portal principal (página distinta)
+        window.location.replace("/");
+      } catch (err) {
+        showToast("Error: " + err.message);
+        btnElement.innerHTML = prevHTML;
+        btnElement.disabled = false;
+      }
+    }
+
+    async function handleManualLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btnManualSubmit");
+      const email = document.getElementById("manualEmail").value;
+      const pass = document.getElementById("manualPassword").value;
+      btn.disabled = true;
+      btn.textContent = "Ingresando…";
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo: email, contrasena: pass })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Credenciales incorrectas" }));
+          throw new Error(err.detail || "Credenciales incorrectas");
+        }
+
+        const data = await res.json();
+        localStorage.setItem("token", data.access_token);
+        window.location.replace("/");
+      } catch (err) {
+        showToast(err.message);
+        btn.disabled = false;
+        btn.textContent = "Iniciar sesión";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,189 +1,96 @@
-"""
-Email service using Gmail SMTP (free for MVP).
-Requires: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL in .env
-"""
-import asyncio
+import logging
+from email.message import EmailMessage
 import aiosmtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from app.core.database import settings
+from backend.app.config import settings
 
+logger = logging.getLogger(__name__)
 
-async def _send_email(to_email: str, subject: str, html_body: str) -> bool:
-    """Low-level async email sender via Gmail SMTP."""
-    if not settings.SMTP_USER or not settings.SMTP_PASS:
-        print(f"[email_service] SMTP not configured. Would have sent '{subject}' to {to_email}")
-        return False
+async def send_flash_test_email(
+    student_name: str,
+    student_email: str,
+    course_name: str,
+    test_link: str,
+    validity_hours: int = 48
+) -> bool:
+    """
+    Sends Flash Test invitation email via Gmail SMTP TLS (RF-010, RI-002).
+    If SMTP credentials are not configured, logs link and simulates successful dispatch.
+    """
+    subject = f"IntegriEval — Verificación Oral Flash: {course_name}"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #1a202c; }}
+        .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }}
+        .header {{ border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 24px; }}
+        .badge {{ background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; }}
+        .btn {{ display: inline-block; background: #2563eb; color: #ffffff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 20px 0; }}
+        .footer {{ margin-top: 24px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 16px; }}
+        .alert {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 16px 0; font-size: 14px; color: #92400e; }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <span class="badge">IntegriEval • Evaluación Auténtica</span>
+          <h2 style="margin: 8px 0 0 0; color: #0f172a;">Verificación Flash de Integridad</h2>
+        </div>
+        <p>Estimado/a <strong>{student_name}</strong>,</p>
+        <p>Como parte del proceso de evaluación de su entrega en la asignatura <strong>{course_name}</strong>, debe completar una breve verificación oral/flash interactiva.</p>
+        
+        <div class="alert">
+          <strong>Reglas del Test:</strong>
+          <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+            <li>El enlace es de <strong>uso único</strong> y expira en {validity_hours} horas.</li>
+            <li>Cuenta con un temporizador activo (60 segundos por pregunta/test).</li>
+            <li>Si el tiempo expira, sus respuestas parciales serán registradas automáticamente.</li>
+          </ul>
+        </div>
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = settings.FROM_EMAIL or settings.SMTP_USER
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+        <p style="text-align: center;">
+          <a href="{test_link}" class="btn" target="_blank">Iniciar Flash Test Ahora</a>
+        </p>
+
+        <p style="font-size: 13px; color: #475569;">
+          Si el botón no funciona, copie y pegue el siguiente enlace en su navegador:<br>
+          <a href="{test_link}" style="color: #2563eb; word-break: break-all;">{test_link}</a>
+        </p>
+
+        <div class="footer">
+          <p>IntegriEval — INFO1197 Septiembre 2026. Sistema de Verificación Académica y Supervisión Docente.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    if not settings.SMTP_ENABLED or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.info(f"[SIMULADOR SMTP] Despacho Flash Test a {student_email}: {test_link}")
+        return True
+
+    message = EmailMessage()
+    message["From"] = settings.SMTP_FROM or settings.SMTP_USER
+    message["To"] = student_email
+    message["Subject"] = subject
+    message.set_content(
+        f"Hola {student_name},\n\nPara completar tu verificación en {course_name}, ingresa al siguiente enlace:\n{test_link}\n\nVálido por {validity_hours}h."
+    )
+    message.add_alternative(html_content, subtype="html")
 
     try:
         await aiosmtplib.send(
-            msg,
+            message,
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASS,
             start_tls=True,
+            username=settings.SMTP_USER,
+            password=settings.SMTP_PASSWORD,
+            timeout=10.0
         )
-        print(f"[email_service] Email sent to {to_email}: {subject}")
         return True
     except Exception as e:
-        print(f"[email_service] Error sending email to {to_email}: {e}")
-        return False
-
-
-def send_flash_test_email_sync(
-    student_email: str,
-    student_name: str,
-    eval_title: str,
-    flash_token: str,
-    ttl_hours: int,
-) -> bool:
-    """
-    Sends the flash test invitation email synchronously (for use in background tasks).
-    """
-    flash_url = f"{settings.FRONTEND_URL}/flash/{flash_token}"
-    subject = f"IntegriEval — Flash Test: {eval_title}"
-
-    html_body = f"""
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px;
-              padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <h2 style="color: #1a1a2e; margin-bottom: 4px;">IntegriEval</h2>
-    <p style="color: #666; margin-top: 0;">Verificación de autoría académica</p>
-
-    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-
-    <p>Hola <strong>{student_name}</strong>,</p>
-
-    <p>Tu trabajo para la evaluación <strong>"{eval_title}"</strong> ha sido revisado.
-    Como parte del proceso de verificación de autoría, debes completar un
-    <strong>Flash Test</strong> con preguntas sobre tu propio trabajo.</p>
-
-    <p>El test es <strong>cronometrado</strong>. Lee cada pregunta con atención y responde
-    según lo que escribiste en tu informe.</p>
-
-    <div style="text-align: center; margin: 32px 0;">
-      <a href="{flash_url}"
-         style="background: #4f46e5; color: white; padding: 14px 32px; border-radius: 6px;
-                text-decoration: none; font-size: 16px; font-weight: bold;">
-        Iniciar Flash Test →
-      </a>
-    </div>
-
-    <p style="color: #888; font-size: 13px;">
-      Este enlace es personal e intransferible. Expira en <strong>{ttl_hours} horas</strong>.
-      Si no puedes acceder, contacta a tu profesor.
-    </p>
-
-    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-    <p style="color: #aaa; font-size: 12px; text-align: center;">
-      IntegriEval — Sistema de verificación de integridad académica
-    </p>
-  </div>
-</body>
-</html>
-"""
-    try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_send_email(student_email, subject, html_body))
-        loop.close()
-        return result
-    except Exception as e:
-        print(f"[email_service] Sync send error: {e}")
-        return False
-
-
-def send_appointment_email_sync(
-    student_email: str,
-    student_name: str,
-    eval_title: str,
-    professor_name: str,
-    scheduled_time_str: str,
-    appointment_type: str,
-    notes: str = "",
-) -> bool:
-    """
-    Sends an appointment notification email to the student.
-    """
-    type_labels = {
-        "defense": "Defensa oral — Justificación de resultados",
-        "high_score_verification": "Verificación de excelencia",
-        "random_verification": "Revisión de verificación aleatoria",
-    }
-    type_label = type_labels.get(appointment_type, "Reunión de revisión")
-
-    subject = f"IntegriEval — Convocatoria: {eval_title}"
-
-    html_body = f"""
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px;
-              padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <h2 style="color: #1a1a2e; margin-bottom: 4px;">IntegriEval</h2>
-    <p style="color: #666; margin-top: 0;">Convocatoria a revisión presencial</p>
-
-    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-
-    <p>Hola <strong>{student_name}</strong>,</p>
-
-    <p>Has sido convocado/a a una reunión de revisión para la evaluación
-    <strong>"{eval_title}"</strong>.</p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 24px 0;">
-      <tr>
-        <td style="padding: 10px; background: #f9f9f9; font-weight: bold; width: 40%;">
-          Tipo de revisión
-        </td>
-        <td style="padding: 10px; background: #f9f9f9;">{type_label}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px; font-weight: bold;">Profesor</td>
-        <td style="padding: 10px;">{professor_name}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px; background: #f9f9f9; font-weight: bold;">
-          Fecha y hora
-        </td>
-        <td style="padding: 10px; background: #f9f9f9;">
-          <strong>{scheduled_time_str}</strong>
-        </td>
-      </tr>
-      {"<tr><td style='padding:10px;font-weight:bold;'>Notas</td><td style='padding:10px;'>" + notes + "</td></tr>" if notes else ""}
-    </table>
-
-    <p>En esta reunión tendrás la oportunidad de <strong>justificar tu trabajo</strong>
-    y potencialmente mejorar tu calificación.</p>
-
-    <p style="color: #888; font-size: 13px;">
-      Si tienes algún inconveniente con el horario, comunícate con tu profesor a la brevedad.
-    </p>
-
-    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-    <p style="color: #aaa; font-size: 12px; text-align: center;">
-      IntegriEval — Sistema de verificación de integridad académica
-    </p>
-  </div>
-</body>
-</html>
-"""
-    try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_send_email(student_email, subject, html_body))
-        loop.close()
-        return result
-    except Exception as e:
-        print(f"[email_service] Sync send error: {e}")
+        logger.error(f"Error enviando correo a {student_email} vía SMTP: {e}")
         return False
