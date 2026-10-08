@@ -36,3 +36,7 @@ Prevención*.pdf
 Prevenci?n*.pdf
 trastorno bipolar*.pdf
 Trastorno sintomas*.pdf
+
+# Node.js dependencies and Next.js generated files
+node_modules/
+.next/
