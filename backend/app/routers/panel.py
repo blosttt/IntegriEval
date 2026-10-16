@@ -8,11 +8,14 @@ from backend.app.auth import get_current_user, check_course_access
 from backend.app.services.websocket_mgr import ws_manager
 from backend.app.audit import log_audit
 
+from backend.app.activities import parameters, work_for
+
 router = APIRouter(tags=["Panel Docente y Cierre"])
 
 @router.get("/api/asignaturas/{asignatura_id}/panel", response_model=schemas.PanelResultadosOut)
 def get_teacher_panel(
     asignatura_id: int,
+    actividad_id: Optional[int] = None,
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -22,11 +25,11 @@ def get_teacher_panel(
     and supports informed oral defense decision making.
     """
     course = check_course_access(asignatura_id, current_user, db)
-    params = course.parametros or {}
+    params = parameters(course, actividad_id, db)
     umbral_ia = float(params.get("umbral_ia", 40.0))
     umbral_coherencia = float(params.get("umbral_coherencia", 60.0))
 
-    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id).all()
+    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).all()
 
     total_alumnos = len(students)
     analizados = 0
@@ -37,10 +40,10 @@ def get_teacher_panel(
 
     filas = []
     for s in students:
-        trabajo = s.trabajo
+        trabajo = work_for(s.id, actividad_id, db)
         evaluacion = trabajo.evaluacion if trabajo else None
-        flash_test = db.query(models.FlashTest).filter(models.FlashTest.estudiante_id == s.id).order_by(models.FlashTest.id.desc()).first()
-        cita = db.query(models.Cita).filter(models.Cita.estudiante_id == s.id).order_by(models.Cita.id.desc()).first()
+        flash_test = db.query(models.FlashTest).filter(models.FlashTest.estudiante_id == s.id, models.FlashTest.actividad_id == actividad_id).order_by(models.FlashTest.id.desc()).first()
+        cita = db.query(models.Cita).filter(models.Cita.estudiante_id == s.id, models.Cita.actividad_id == actividad_id).order_by(models.Cita.id.desc()).first()
 
         trabajo_estado = trabajo.estado if trabajo else "sin_entrega"
         nota_preliminar = evaluacion.nota if evaluacion else None
@@ -59,7 +62,7 @@ def get_teacher_panel(
             desglose = evaluacion.desglose or {}
             confianza_ia = desglose.get("deteccion_ia", {}).get("nivel_confianza", "medio")
             coherencia_str = desglose.get("evaluacion_respuestas", {}).get("porcentaje_coherencia")
-            req_def = desglose.get("evaluacion_respuestas", {}).get("requiere_defensa_oral", False)
+            req_def = (pct_ia is not None and pct_ia >= umbral_ia)
 
             raw_logro = desglose.get("porcentaje_logro")
             if raw_logro:
@@ -73,8 +76,8 @@ def get_teacher_panel(
                 else:
                     pct_logro = round(max(0.0, (evaluacion.nota - 1.0) * (60.0 / 3.0)), 1)
 
-        puntaje_flash = flash_test.puntaje if flash_test else None
-        if flash_test and flash_test.estado == "completado":
+        puntaje_flash = flash_test.puntaje if flash_test and flash_test.estado == "completado" and flash_test.fecha_completado else None
+        if flash_test and flash_test.estado == "completado" and flash_test.fecha_completado:
             tests_completados += 1
             if puntaje_flash is not None and puntaje_flash < umbral_coherencia:
                 req_def = True
@@ -89,13 +92,7 @@ def get_teacher_panel(
         pct_logro_final = None
         if flash_test and flash_test.nota_final_confirmada is not None:
             val = flash_test.nota_final_confirmada
-            if val > 7.0:
-                pct_logro_final = round(val, 1)
-            else:
-                if val >= 4.0:
-                    pct_logro_final = round(60.0 + (val - 4.0) * (40.0 / 3.0), 1)
-                else:
-                    pct_logro_final = round(max(0.0, (val - 1.0) * (60.0 / 3.0)), 1)
+            pct_logro_final = round(val, 1)
         elif is_cerrada:
             pct_logro_final = pct_logro
 
@@ -126,7 +123,8 @@ def get_teacher_panel(
                 nota_final=flash_test.nota_final_confirmada if flash_test else nota_preliminar,
                 justificacion_nota=flash_test.justificacion_nota if flash_test else "Criterio del docente",
                 nota_cerrada=is_cerrada,
-                flash_test_token=flash_test.token if flash_test else None
+                flash_test_token=flash_test.token if flash_test else None,
+                flash_test_estado=flash_test.estado if flash_test else None
             )
         )
 
@@ -134,6 +132,9 @@ def get_teacher_panel(
         asignatura_id=course.id,
         asignatura_nombre=course.nombre,
         total_alumnos=total_alumnos,
+        total_materiales=len(course.materiales),
+        tests_despachados=db.query(models.FlashTest).join(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id, models.FlashTest.actividad_id == actividad_id).count(),
+        umbral_ia=umbral_ia,
         analizados=analizados,
         alerta_ia=alerta_ia,
         requieren_defensa=requieren_defensa,
@@ -152,7 +153,7 @@ def schedule_oral_defense(
     """
     Schedule an oral defense appointment for an alerted student (RF-013)
     """
-    course = check_course_access(asignatura_id, current_user, db)
+    course = check_course_access(asignatura_id, current_user, db, write=True)
     student = db.query(models.Estudiante).filter(
         models.Estudiante.id == data.estudiante_id,
         models.Estudiante.asignatura_id == asignatura_id
@@ -160,7 +161,9 @@ def schedule_oral_defense(
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado en esta asignatura")
 
+    parameters(course, data.actividad_id, db)
     cita = models.Cita(
+        actividad_id=data.actividad_id,
         estudiante_id=student.id,
         docente_id=current_user.id,
         fecha=data.fecha,
@@ -189,6 +192,7 @@ def schedule_oral_defense(
 
     return schemas.CitaOut(
         id=cita.id,
+        actividad_id=cita.actividad_id,
         estudiante_id=cita.estudiante_id,
         estudiante_nombre=student.nombre,
         docente_id=cita.docente_id,
@@ -203,6 +207,7 @@ def schedule_oral_defense(
 def close_grade(
     asignatura_id: int,
     data: schemas.CierreNotaRequest,
+    actividad_id: Optional[int] = None,
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -210,7 +215,7 @@ def close_grade(
     Cierre de calificaciones con nota editable y justificación obligatoria (RF-013, RN-004, RNF-003 <= 200ms).
     Persists immutable audit log.
     """
-    course = check_course_access(asignatura_id, current_user, db)
+    course = check_course_access(asignatura_id, current_user, db, write=True)
     student = db.query(models.Estudiante).filter(
         models.Estudiante.id == data.estudiante_id,
         models.Estudiante.asignatura_id == asignatura_id
@@ -218,16 +223,19 @@ def close_grade(
     if not student:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
+    parameters(course, actividad_id, db)
+    work = work_for(student.id, actividad_id, db)
     # Fetch latest FlashTest or create a closing record
-    test = db.query(models.FlashTest).filter(models.FlashTest.estudiante_id == student.id).order_by(models.FlashTest.id.desc()).first()
+    test = db.query(models.FlashTest).filter(models.FlashTest.estudiante_id == student.id, models.FlashTest.actividad_id == actividad_id).order_by(models.FlashTest.id.desc()).first()
     if not test:
         test = models.FlashTest(
             estudiante_id=student.id,
+            actividad_id=actividad_id,
             estado="completado"
         )
         db.add(test)
 
-    nota_previa = test.nota_final_confirmada or (student.trabajo.evaluacion.nota if student.trabajo and student.trabajo.evaluacion else None)
+    nota_previa = test.nota_final_confirmada if test.nota_final_confirmada is not None else (work.evaluacion.nota if work and work.evaluacion else None)
 
     # RN-004: Campo justificación obligatorio (defecto 'Criterio del docente')
     justificacion = data.justificacion.strip() if data.justificacion and data.justificacion.strip() else "Criterio del docente"
@@ -263,8 +271,19 @@ def close_grade(
     }
 
 @router.websocket("/ws/panel/{asignatura_id}")
-async def websocket_teacher_panel(websocket: WebSocket, asignatura_id: int):
+async def websocket_teacher_panel(websocket: WebSocket, asignatura_id: int, db: Session = Depends(get_db)):
     """Teacher live dashboard observer WebSocket (RF-012, RNF-001)"""
+    try:
+        user = get_current_user(websocket.query_params.get("token", ""), db)
+        check_course_access(asignatura_id, user, db)
+    except HTTPException:
+        await websocket.close(code=1008)
+        return
+    def authorize_observer():
+        db.expire_all()
+        active_user = get_current_user(websocket.query_params.get("token", ""), db)
+        check_course_access(asignatura_id, active_user, db)
+    websocket.state.authorize_observer = authorize_observer
     await ws_manager.connect_teacher(websocket, asignatura_id)
     try:
         while True:

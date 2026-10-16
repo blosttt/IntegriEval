@@ -74,3 +74,12 @@ def seeded_teacher(db_session):
     db_session.refresh(course)
 
     return {"teacher": teacher, "course": course}
+
+
+@pytest.fixture
+def seeded_admin(db_session):
+    admin = models.Usuario(nombre="Administración Pruebas", correo="admin.test@universidad.cl", contrasena=hash_password("AdminTest123!"), rol="admin")
+    db_session.add(admin)
+    db_session.commit()
+    db_session.refresh(admin)
+    return admin

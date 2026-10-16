@@ -42,7 +42,7 @@ async function apiCall(endpoint, method = "GET", body = null, isFormData = false
   if (resp.status === 401) { logout(); throw new Error("Sesión expirada"); }
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ detail: "Error desconocido" }));
-    throw new Error(err.detail || "Error en la solicitud");
+    throw new Error(Array.isArray(err.detail) ? err.detail.map(e => e.msg).join("; ") : (err.detail || "Error en la solicitud"));
   }
   return resp.json();
 }
@@ -213,7 +213,7 @@ async function handleLogin(e) {
 function logout() {
   currentToken = null;
   localStorage.removeItem("token");
-  if (teacherWS) { teacherWS.close(); teacherWS = null; }
+  if (teacherWS) { teacherWS.onclose = null; teacherWS.close(); teacherWS = null; }
   currentUser = null;
   currentCourseId = null;
   window.location.replace("/login");
@@ -249,9 +249,9 @@ function onCourseChange() {
 
 /* ── WebSocket Live Updates ──────────────────────────────────────────── */
 function connectTeacherWS(courseId) {
-  if (teacherWS) { teacherWS.close(); teacherWS = null; }
+  if (teacherWS) { teacherWS.onclose = null; teacherWS.close(); teacherWS = null; }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  teacherWS = new WebSocket(`${proto}//${location.host}/ws/panel/${courseId}`);
+  teacherWS = new WebSocket(`${proto}//${location.host}/ws/panel/${courseId}?token=${encodeURIComponent(currentToken)}`);
 
   teacherWS.onopen  = () => {
     const b = document.getElementById("wsStatusBadge");
@@ -260,7 +260,7 @@ function connectTeacherWS(courseId) {
   teacherWS.onclose = () => {
     const b = document.getElementById("wsStatusBadge");
     if (b) { b.textContent = "○ Desconectado"; b.className = "badge badge-gray"; }
-    setTimeout(() => connectTeacherWS(courseId), 3000);
+    if (currentToken && Number(currentCourseId) === Number(courseId)) setTimeout(() => connectTeacherWS(courseId), 3000);
   };
   teacherWS.onmessage = e => {
     const data = JSON.parse(e.data);
@@ -349,8 +349,8 @@ function updateWorkflowGuide(data) {
   // Step 2: Materiales
   const b2 = document.getElementById("wfBadge2");
   if (b2) {
-    b2.className = "wf-step-badge wf-badge-done";
-    b2.textContent = "✓ Syllabus activo";
+    b2.className = "wf-step-badge " + (data.total_materiales ? "wf-badge-done" : "wf-badge-pending");
+    b2.textContent = data.total_materiales ? `✓ ${data.total_materiales} materiales` : "Sin materiales";
   }
 
   // Step 3: Informes
@@ -373,7 +373,7 @@ function updateWorkflowGuide(data) {
       b4.textContent = `✓ ${data.tests_completados} respondidos`;
     } else {
       b4.className = "wf-step-badge wf-badge-pending";
-      b4.textContent = "0 despachados";
+      b4.textContent = `${data.tests_despachados || 0} despachados`;
     }
   }
 
@@ -402,7 +402,7 @@ function renderPanelTable(estudiantes) {
 
   const filtered = estudiantes.filter(s => {
     if (filter === "defensa")   return s.requiere_defensa;
-    if (filter === "alerta_ia") return s.pct_ia !== null && s.pct_ia >= 40;
+    if (filter === "alerta_ia") return s.pct_ia !== null && s.pct_ia >= (panelData?.umbral_ia ?? 40);
     if (filter === "cerradas")  return s.nota_cerrada;
     return true;
   });
@@ -419,13 +419,14 @@ function renderPanelTable(estudiantes) {
     /* IA badge */
     let iaBadge = `<span class="badge badge-gray">Pendiente</span>`;
     if (s.pct_ia !== null) {
-      if (s.pct_ia >= 50) iaBadge = `<span class="badge badge-red">⚠ ${s.pct_ia}% <span style="opacity:.7;font-weight:400;">${s.confianza_ia}</span></span>`;
+      if (s.pct_ia >= 50) iaBadge = `<span class="badge badge-red">⚠ ${s.pct_ia}% <span style="opacity:.7;font-weight:400;">${escapeHTML(s.confianza_ia)}</span></span>`;
       else if (s.pct_ia >= 35) iaBadge = `<span class="badge badge-amber">⚡ ${s.pct_ia}%</span>`;
       else iaBadge = `<span class="badge badge-green">✓ ${s.pct_ia}%</span>`;
     }
 
     /* Flash badge */
     let flashBadge = `<span class="badge badge-gray">Sin test</span>`;
+    if (s.flash_test_estado && s.flash_test_estado !== "completado") flashBadge = `<span class="badge badge-gray">${escapeHTML(s.flash_test_estado)}</span>`;
     if (s.puntaje_flash !== null) {
       if (s.puntaje_flash >= 70)     flashBadge = `<span class="badge badge-green">✓ ${s.puntaje_flash}%</span>`;
       else if (s.puntaje_flash >= 50) flashBadge = `<span class="badge badge-amber">⚡ ${s.puntaje_flash}%</span>`;
@@ -435,13 +436,13 @@ function renderPanelTable(estudiantes) {
     /* Decision */
     const defBadge = s.requiere_defensa
       ? `<span class="badge badge-red">Defensa oral</span>`
-      : `<span class="badge badge-green">Validado</span>`;
+      : (s.nota_cerrada ? `<span class="badge badge-green">Confirmado</span>` : `<span class="badge badge-gray">Revisión pendiente</span>`);
 
     /* Cita */
     let citaBadge = `<span class="text-xs text-muted">—</span>`;
     if (s.cita_bloque) {
       const estadoColor = { programada: "blue", realizada: "green", ausente: "red", cancelada: "gray" };
-      citaBadge = `<span class="badge badge-${estadoColor[s.cita_estado] || "gray"}" title="${s.cita_fecha || ''}">${s.cita_bloque}</span>`;
+      citaBadge = `<span class="badge badge-${estadoColor[s.cita_estado] || "gray"}" title="${s.cita_fecha || ''}">${escapeHTML(s.cita_bloque)}</span>`;
     }
 
     /* % de Logro */
@@ -469,8 +470,8 @@ function renderPanelTable(estudiantes) {
     return `
     <tr>
       <td>
-        <div class="font-medium" style="color:var(--text);">${s.estudiante_nombre}</div>
-        <div class="text-xs text-muted truncate" style="max-width:180px;">${s.estudiante_correo}</div>
+        <div class="font-medium" style="color:var(--text);">${escapeHTML(s.estudiante_nombre)}</div>
+        <div class="text-xs text-muted truncate" style="max-width:180px;">${escapeHTML(s.estudiante_correo)}</div>
       </td>
       <td>${logroDisplay}</td>
       <td>${iaBadge}</td>
@@ -480,8 +481,10 @@ function renderPanelTable(estudiantes) {
       <td>
         <div class="row-actions">
           <button class="btn btn-secondary btn-sm" onclick="openAnexoAModal(${s.estudiante_id})" data-tooltip="Ver Anexo A">🔍</button>
-          <button class="btn btn-secondary btn-sm" onclick="openCitaModal(${s.estudiante_id},'${s.estudiante_nombre.replace(/'/g,"\\'")}')" data-tooltip="Citar a defensa">📅</button>
-          <button class="btn btn-primary btn-sm"   onclick="openCierreModal(${s.estudiante_id},'${s.estudiante_nombre.replace(/'/g,"\\'")}',${logroNum ?? 60})" data-tooltip="Confirmar % Logro">✍</button>
+          ${s.trabajo_estado === "analizado" && !s.nota_cerrada ? `<button class="btn btn-secondary btn-sm" onclick="dispatchOne(${s.estudiante_id})">Enviar test</button>` : ""}
+          <button class="btn btn-secondary btn-sm" onclick="openCitaModal(${s.estudiante_id},decodeURIComponent('${encodeURIComponent(s.estudiante_nombre).replace(/'/g, '%27')}'))" data-tooltip="Citar a defensa">📅</button>
+          ${s.cita_id ? `<button class="btn btn-secondary btn-sm" onclick="manageAppointment(${s.cita_id})">Actualizar cita</button>` : ""}
+          <button class="btn btn-primary btn-sm"   onclick="openCierreModal(${s.estudiante_id},decodeURIComponent('${encodeURIComponent(s.estudiante_nombre).replace(/'/g, '%27')}'),${logroNum ?? 60})" data-tooltip="Confirmar % Logro">✍</button>
         </div>
       </td>
     </tr>`;
@@ -526,15 +529,15 @@ async function openAnexoAModal(studentId) {
         <div class="anexo-section-body">
           <div style="margin-bottom:.75rem;">
             <div class="text-xs font-medium text-muted mb-2" style="text-transform:uppercase;">Fortalezas</div>
-            ${(fb.fortalezas||[]).map(f=>`<div class="feedback-item"><span style="color:var(--success);">✓</span><span>${f}</span></div>`).join("")}
+            ${(fb.fortalezas||[]).map(f=>`<div class="feedback-item"><span style="color:var(--success);">✓</span><span>${escapeHTML(f)}</span></div>`).join("")}
           </div>
           <div style="margin-bottom:.75rem;">
             <div class="text-xs font-medium text-muted mb-2" style="text-transform:uppercase;">Debilidades</div>
-            ${(fb.debilidades||[]).map(f=>`<div class="feedback-item"><span style="color:var(--warning);">⚠</span><span>${f}</span></div>`).join("")}
+            ${(fb.debilidades||[]).map(f=>`<div class="feedback-item"><span style="color:var(--warning);">⚠</span><span>${escapeHTML(f)}</span></div>`).join("")}
           </div>
           <div>
             <div class="text-xs font-medium text-muted mb-2" style="text-transform:uppercase;">Recomendaciones</div>
-            ${(fb.recomendaciones||[]).map(f=>`<div class="feedback-item"><span style="color:var(--brand-blue);">💡</span><span>${f}</span></div>`).join("")}
+            ${(fb.recomendaciones||[]).map(f=>`<div class="feedback-item"><span style="color:var(--brand-blue);">💡</span><span>${escapeHTML(f)}</span></div>`).join("")}
           </div>
         </div>
       </div>
@@ -578,7 +581,7 @@ async function openAnexoAModal(studentId) {
           ${(er.preguntas_falladas||[]).length ? `
             <div style="margin-top:.75rem;">
               <div class="text-xs text-muted font-medium" style="text-transform:uppercase;margin-bottom:.5rem;">Preguntas falladas</div>
-              ${er.preguntas_falladas.map(p=>`<div class="feedback-item"><span style="color:var(--danger);">✗</span><span>${p}</span></div>`).join("")}
+              ${er.preguntas_falladas.map(p=>`<div class="feedback-item"><span style="color:var(--danger);">✗</span><span>${escapeHTML(p)}</span></div>`).join("")}
             </div>` : ""}
         </div>
       </div>
@@ -664,7 +667,7 @@ async function handleDispatchFlashTests() {
     document.getElementById("dispatchLinksContainer").innerHTML = `
       <div class="callout callout-green mb-4">
         <div class="callout-icon">✅</div>
-        <div><strong>${res.total_despachados} token(s) UUIDv4</strong> generados con vigencia 48 h. Correos despachados vía Gmail SMTP.</div>
+        <div><strong>${res.total_despachados} token(s) UUIDv4</strong> generados con vigencia 48 h. El estado de cada envío se muestra abajo.</div>
       </div>
       <div class="table-wrap">
         <table>
@@ -675,7 +678,7 @@ async function handleDispatchFlashTests() {
                 <td>#${item.estudiante_id}</td>
                 <td>${item.correo}</td>
                 <td><a href="${item.enlace_test}" target="_blank" style="color:var(--brand-blue);font-size:.75rem;font-family:'JetBrains Mono',monospace;">${item.enlace_test}</a></td>
-                <td>${item.correo_enviado ? '<span class="badge badge-green">✓ Enviado</span>' : '<span class="badge badge-gray">Simulado</span>'}</td>
+                <td>${item.correo_enviado ? '<span class="badge badge-green">✓ Enviado</span>' : '<span class="badge badge-gray">Enlace disponible; correo no enviado</span>'}</td>
               </tr>`).join("")}
           </tbody>
         </table>
@@ -692,7 +695,12 @@ async function handleDispatchFlashTests() {
 async function loadNomina() {
   if (!currentCourseId) return;
   const students = await apiCall(`/api/asignaturas/${currentCourseId}/estudiantes`);
+  window.rosterStudents = students;
   const tbody = document.getElementById("nominaTableBody");
+  if (!document.getElementById("addStudentButton")) {
+    const button = document.createElement("button"); button.id = "addStudentButton"; button.className = "btn btn-secondary"; button.textContent = "Agregar estudiante"; button.onclick = () => editStudent();
+    tbody.closest(".card").prepend(button);
+  }
   const countEl = document.getElementById("nominaCount");
   if (countEl) countEl.textContent = `${students.length} registros`;
 
@@ -703,8 +711,8 @@ async function loadNomina() {
   tbody.innerHTML = students.map((s, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td><strong>${s.nombre}</strong></td>
-      <td><span class="text-sm" style="font-family:'JetBrains Mono',monospace;">${s.correo}</span></td>
+      <td><strong>${escapeHTML(s.nombre)}</strong> <button class="btn btn-ghost btn-sm" onclick="editStudent(${s.id})">Editar</button></td>
+      <td><span class="text-sm" style="font-family:'JetBrains Mono',monospace;">${escapeHTML(s.correo)}</span></td>
       <td>${s.rut || "<span class='text-muted'>—</span>"}</td>
       <td>${s.tiene_trabajo
         ? '<span class="badge badge-green">✓ PDF cargado</span>'
@@ -733,7 +741,7 @@ async function handleCSVUpload(file) {
     loadNomina();
     showToast("CSV importado", `${res.cargados_exitosamente} alumnos cargados.`, "success");
   } catch (err) {
-    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${err.message}</div></div>`;
+    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${escapeHTML(err.message)}</div></div>`;
     showToast("Error CSV", err.message, "error");
   }
 }
@@ -752,11 +760,11 @@ async function loadMateriales() {
   const typeBadge = { syllabus:"badge-blue", rubrica:"badge-red", guia:"badge-green", otro:"badge-gray" };
   tbody.innerHTML = mats.map(m => `
     <tr>
-      <td><strong>${m.nombre}</strong></td>
+      <td><strong>${escapeHTML(m.nombre)}</strong></td>
       <td><span class="badge ${typeBadge[m.tipo]||'badge-gray'}">${typeLabel[m.tipo]||m.tipo}</span></td>
       <td><span class="text-muted">${m.markdown.length.toLocaleString()} caracteres</span></td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="previewMarkdown(${JSON.stringify(m.markdown.slice(0,3000))})">Ver Markdown</button>
+        <button class="btn btn-secondary btn-sm" data-markdown="${encodeURIComponent(m.markdown)}" onclick="previewMarkdown(decodeURIComponent(this.dataset.markdown))">Ver Markdown</button>
       </td>
     </tr>`).join("");
 }
@@ -813,10 +821,10 @@ async function handleSinglePDFUpload(e) {
   fd.append("file", file);
   try {
     const res = await apiCall(`/api/asignaturas/${currentCourseId}/trabajos/upload`, "POST", fd, true);
-    statusEl.innerHTML = `<div class="callout callout-green"><div class="callout-icon">✅</div><div>${res.message}</div></div>`;
+    statusEl.innerHTML = `<div class="callout callout-green"><div class="callout-icon">✅</div><div>${escapeHTML(res.message)}</div></div>`;
     showToast("Evaluación completada", res.message, "success");
   } catch (err) {
-    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${err.message}</div></div>`;
+    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${escapeHTML(err.message)}</div></div>`;
     showToast("Error", err.message, "error");
   }
 }
@@ -832,7 +840,7 @@ async function handleBatchPDFUpload(files) {
     statusEl.innerHTML = `<div class="callout callout-green"><div class="callout-icon">✅</div><div>Asociados: <strong>${res.asociados_y_evaluados}</strong> de ${res.total_archivos}</div></div>`;
     showToast("Batch completado", `${res.asociados_y_evaluados} informes procesados.`, "success");
   } catch (err) {
-    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${err.message}</div></div>`;
+    statusEl.innerHTML = `<div class="callout callout-red"><div class="callout-icon">❌</div><div>${escapeHTML(err.message)}</div></div>`;
     showToast("Error batch", err.message, "error");
   }
 }
@@ -867,6 +875,7 @@ async function onPoolStudentChange() {
 
 function renderPoolQuestions(evalId, questions) {
   const container = document.getElementById("questionsPoolContainer");
+  window.poolQuestions = questions;
   const selected  = questions.filter(q => q.seleccionada).length;
 
   container.innerHTML = `
@@ -884,17 +893,18 @@ function renderPoolQuestions(evalId, questions) {
             <label style="display:flex;align-items:flex-start;gap:.75rem;cursor:pointer;">
               <input type="checkbox" class="q-select-check" data-qid="${q.id}" ${q.seleccionada?"checked":""} style="margin-top:3px;width:16px;height:16px;accent-color:var(--brand-blue);">
               <div style="flex:1;">
-                <div class="text-sm font-medium" style="color:var(--text);margin-bottom:.5rem;">${q.texto}</div>
+                <div class="text-sm font-medium" style="color:var(--text);margin-bottom:.5rem;">${escapeHTML(q.texto)}</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.25rem;">
                   ${q.alternativas.map(a => `
                     <div style="display:flex;gap:.4rem;align-items:flex-start;font-size:.75rem;padding:.3rem .5rem;background:${a.es_correcta?"var(--success-light)":"var(--surface-2)"};border-radius:var(--r-sm);">
                       <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${a.es_correcta?"var(--success)":"var(--text-muted)"};">${a.id}</span>
-                      <span style="color:${a.es_correcta?"var(--success-dark)":"var(--text-muted)"};">${a.texto}</span>
+                      <span style="color:${a.es_correcta?"var(--success-dark)":"var(--text-muted)"};">${escapeHTML(a.texto)}</span>
                     </div>`).join("")}
                 </div>
-                ${q.seccion_origen ? `<div class="text-xs text-muted mt-2">📌 Sección: ${q.seccion_origen}</div>` : ""}
+                ${q.seccion_origen ? `<div class="text-xs text-muted mt-2">📌 Sección: ${escapeHTML(q.seccion_origen)}</div>` : ""}
               </div>
             </label>
+            <button class="btn btn-secondary btn-sm" onclick="editQuestion(${q.id})">Editar pregunta</button>
           </div>`).join("")}
       </div>
     </div>`;
@@ -926,8 +936,8 @@ async function loadAuditoria() {
   tbody.innerHTML = logs.map(l => `
     <tr>
       <td class="text-muted">#${l.id}</td>
-      <td><span class="badge ${actionColor[l.accion]||"badge-gray"}">${l.accion}</span></td>
-      <td><code>${l.tabla}</code></td>
+      <td><span class="badge ${actionColor[l.accion]||"badge-gray"}">${escapeHTML(l.accion)}</span></td>
+      <td><code>${escapeHTML(l.tabla)}</code></td>
       <td>${l.usuario_nombre || "Sistema"}</td>
       <td class="text-xs text-muted">${new Date(l.timestamp).toLocaleString("es-CL")}</td>
       <td>
@@ -943,11 +953,11 @@ function viewAuditDiff(prevEnc, nextEnc) {
     <div class="grid-2">
       <div>
         <p class="text-xs font-medium text-muted mb-2" style="text-transform:uppercase;">Estado previo</p>
-        <pre style="background:var(--surface-2);padding:.875rem;border-radius:var(--r-md);font-size:.75rem;overflow-x:auto;">${JSON.stringify(prev,null,2)||"—"}</pre>
+        <pre style="background:var(--surface-2);padding:.875rem;border-radius:var(--r-md);font-size:.75rem;overflow-x:auto;">${escapeHTML(JSON.stringify(prev,null,2)||"—")}</pre>
       </div>
       <div>
         <p class="text-xs font-medium text-muted mb-2" style="text-transform:uppercase;">Estado nuevo</p>
-        <pre style="background:var(--success-light);padding:.875rem;border-radius:var(--r-md);font-size:.75rem;overflow-x:auto;color:var(--success-dark);">${JSON.stringify(next,null,2)||"—"}</pre>
+        <pre style="background:var(--success-light);padding:.875rem;border-radius:var(--r-md);font-size:.75rem;overflow-x:auto;color:var(--success-dark);">${escapeHTML(JSON.stringify(next,null,2)||"—")}</pre>
       </div>
     </div>`;
   document.getElementById("auditModal").style.display = "flex";
@@ -962,8 +972,8 @@ async function loadConfig() {
   document.getElementById("configRigor").value             = p.nivel_rigor   || "medium";
   document.getElementById("configPoolSize").value          = p.pool_size     || 15;
   document.getElementById("configNumTest").value           = p.num_preguntas_test || 5;
-  document.getElementById("configUmbralIA").value          = p.umbral_ia     || 40;
-  document.getElementById("configUmbralCoherencia").value  = p.umbral_coherencia || 60;
+  document.getElementById("configUmbralIA").value          = p.umbral_ia     ?? 40;
+  document.getElementById("configUmbralCoherencia").value  = p.umbral_coherencia ?? 60;
   document.getElementById("configTiempoTest").value        = p.tiempo_test_segundos || 60;
 }
 
@@ -1007,4 +1017,110 @@ async function handleCreateCourse(e) {
 /* ── Modal helper ────────────────────────────────────────────────────── */
 function closeModal(id) {
   document.getElementById(id).style.display = "none";
+}
+
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function editQuestion(id) {
+  const q = window.poolQuestions.find(q => q.id === id);
+  let modal = document.getElementById('editQuestionModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'editQuestionModal'; modal.className = 'modal-overlay'; document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `<div class="modal"><form id="questionEditForm"><div class="modal-header"><h3>Editar pregunta</h3></div><div class="modal-body">
+    <label>Enunciado<textarea class="form-textarea" name="texto" required>${escapeHTML(q.texto)}</textarea></label>
+    ${q.alternativas.map(a => `<label>Alternativa ${escapeHTML(a.id)}<input class="form-input" name="alt_${escapeHTML(a.id)}" value="${escapeHTML(a.texto)}" required></label>`).join('')}
+    <label>Respuesta correcta<select class="form-select" name="correcta">${q.alternativas.map(a => `<option value="${escapeHTML(a.id)}" ${a.es_correcta ? 'selected' : ''}>${escapeHTML(a.id)}</option>`).join('')}</select></label>
+    <label>Justificación<textarea class="form-textarea" name="justificacion">${escapeHTML(q.justificacion_respuesta)}</textarea></label>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editQuestionModal')">Cancelar</button><button class="btn btn-primary">Guardar</button></div></form></div>`;
+  document.getElementById('questionEditForm').onsubmit = async event => {
+    event.preventDefault(); const form = new FormData(event.target);
+    try {
+      await apiCall(`/api/preguntas/${id}`, 'PUT', {texto: form.get('texto'), justificacion_respuesta: form.get('justificacion'),
+        alternativas: q.alternativas.map(a => ({id: a.id, texto: form.get('alt_' + a.id), es_correcta: a.id === form.get('correcta')}))});
+      closeModal('editQuestionModal'); await onPoolStudentChange(); showToast('Pregunta actualizada', '', 'success');
+    } catch(error) { showToast('Error', error.message, 'error'); }
+  };
+}
+
+
+function managementModal(title, content) {
+  let modal = document.getElementById('managementModal');
+  if (!modal) { modal = document.createElement('div'); modal.id = 'managementModal'; modal.className = 'modal-overlay'; document.body.appendChild(modal); }
+  modal.style.display = 'flex';
+  modal.innerHTML = `<div class="modal"><div class="modal-header"><h3>${title}</h3><button class="btn btn-ghost" onclick="closeModal('managementModal')">✕</button></div><div class="modal-body">${content}</div></div>`;
+  return modal;
+}
+
+function editStudent(id = null) {
+  const s = (window.rosterStudents || []).find(s => s.id === id) || {};
+  const modal = managementModal(id ? 'Editar estudiante' : 'Agregar estudiante', `<form id="studentForm">
+    <label>Nombre<input class="form-input" name="nombre" required value="${escapeHTML(s.nombre)}"></label>
+    <label>Correo<input class="form-input" type="email" name="correo" required value="${escapeHTML(s.correo)}"></label>
+    <label>RUT<input class="form-input" name="rut" value="${escapeHTML(s.rut)}"></label>
+    <button class="btn btn-primary">Guardar</button></form>`);
+  modal.querySelector('form').onsubmit = async event => {
+    event.preventDefault();
+    try {
+      await apiCall(`/api/asignaturas/${currentCourseId}/estudiantes${id ? '/' + id : ''}`, id ? 'PUT' : 'POST', Object.fromEntries(new FormData(event.target)));
+      closeModal('managementModal'); await loadNomina(); await loadPanel();
+    } catch(error) { showToast('Error', error.message, 'error'); }
+  };
+}
+
+async function openCourseManagement() {
+  try {
+    const [course, assistants] = await Promise.all([apiCall(`/api/asignaturas/${currentCourseId}`), apiCall(`/api/asignaturas/${currentCourseId}/ayudantes`)]);
+    const modal = managementModal('Gestión de asignatura', `<form id="courseEditForm">
+      <label>Nombre<input class="form-input" name="nombre" required value="${escapeHTML(course.nombre)}"></label>
+      <label>Período<input class="form-input" name="periodo" required value="${escapeHTML(course.periodo)}"></label>
+      <label>Año<input class="form-input" type="number" name="ano" required value="${course.ano}"></label><button class="btn btn-primary">Guardar asignatura</button></form>
+      <hr><h4>Ayudantes con acceso de consulta</h4>
+      ${assistants.map(a => `<p>${escapeHTML(a.nombre)} · ${escapeHTML(a.correo)} <button class="btn btn-ghost" data-id="${a.id}">Retirar</button></p>`).join('') || '<p>Sin ayudantes asignados</p>'}
+      <form id="assistantForm"><label>Correo de ayudante registrado<input class="form-input" name="correo" type="email" required></label><button class="btn btn-secondary">Asignar ayudante</button></form>`);
+    modal.querySelector('#courseEditForm').onsubmit = async event => {
+      event.preventDefault(); const data = Object.fromEntries(new FormData(event.target)); data.ano = Number(data.ano);
+      try { await apiCall(`/api/asignaturas/${currentCourseId}`, 'PUT', data); closeModal('managementModal'); await loadCourses(); } catch(e) { showToast('Error', e.message, 'error'); }
+    };
+    modal.querySelector('#assistantForm').onsubmit = async event => {
+      event.preventDefault();
+      try { await apiCall(`/api/asignaturas/${currentCourseId}/ayudantes`, 'POST', Object.fromEntries(new FormData(event.target))); await openCourseManagement(); } catch(e) { showToast('Error', e.message, 'error'); }
+    };
+    modal.querySelectorAll('[data-id]').forEach(button => button.onclick = async () => {
+      try { await apiCall(`/api/asignaturas/${currentCourseId}/ayudantes/${button.dataset.id}`, 'DELETE'); await openCourseManagement(); } catch(e) { showToast('Error', e.message, 'error'); }
+    });
+  } catch(e) { showToast('Error', e.message, 'error'); }
+}
+
+async function manageAppointment(id) {
+  try {
+    const appointments = await apiCall(`/api/asignaturas/${currentCourseId}/citas`);
+    const c = appointments.find(c => c.id === id);
+    const modal = managementModal('Actualizar defensa oral', `<form id="appointmentForm">
+      <p>${escapeHTML(c.estudiante_nombre)}</p>
+      <label>Fecha<input class="form-input" type="date" name="fecha" value="${c.fecha.slice(0,10)}" required></label>
+      <label>Bloque<input class="form-input" name="bloque" value="${escapeHTML(c.bloque)}" required></label>
+      <label>Estado<select class="form-select" name="estado">${['programada','realizada','ausente','cancelada'].map(v => `<option ${v === c.estado ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>Acuerdos<textarea class="form-textarea" name="acuerdos">${escapeHTML(c.acuerdos)}</textarea></label>
+      <button class="btn btn-primary">Guardar</button></form>`);
+    modal.querySelector('form').onsubmit = async event => {
+      event.preventDefault(); const data = Object.fromEntries(new FormData(event.target)); data.fecha += 'T12:00:00Z';
+      try { await apiCall(`/api/asignaturas/${currentCourseId}/citas/${id}`, 'PUT', data); closeModal('managementModal'); await loadPanel(); } catch(e) { showToast('Error', e.message, 'error'); }
+    };
+  } catch(e) { showToast('Error', e.message, 'error'); }
+}
+
+async function dispatchOne(studentId) {
+  try {
+    const result = await apiCall(`/api/asignaturas/${currentCourseId}/flash-test/despacho`, 'POST', [studentId]);
+    if (!result.items.length) { showToast('Sin despachos', 'El test ya fue completado o falta seleccionar preguntas.', 'warning'); return; }
+    const item = result.items[0];
+    managementModal('Enlace de Flash Test', `<p>${item.correo_enviado ? 'Correo enviado' : escapeHTML(item.error)}</p><a href="${escapeHTML(item.enlace_test)}" target="_blank" rel="noopener">${escapeHTML(item.enlace_test)}</a>`);
+    await loadPanel();
+  } catch(e) { showToast('Error', e.message, 'error'); }
 }

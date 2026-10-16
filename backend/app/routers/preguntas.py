@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
-from backend.app.auth import get_current_user
+from backend.app.auth import get_current_user, check_course_access
 from backend.app.audit import log_audit
 
 router = APIRouter(tags=["Pool de Preguntas"])
@@ -18,6 +18,7 @@ def get_pool_preguntas(
     evaluacion = db.query(models.Evaluacion).filter(models.Evaluacion.id == evaluacion_id).first()
     if not evaluacion:
         raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+    check_course_access(evaluacion.trabajo.estudiante.asignatura_id, current_user, db)
     return evaluacion.preguntas
 
 @router.put("/api/preguntas/{pregunta_id}", response_model=schemas.PreguntaOut)
@@ -32,6 +33,8 @@ def update_pregunta(
     if not pregunta:
         raise HTTPException(status_code=404, detail="Pregunta no encontrada")
 
+    check_course_access(pregunta.evaluacion.trabajo.estudiante.asignatura_id, current_user, db, write=True)
+    assert_editable(pregunta.evaluacion, db)
     datos_previos = {"texto": pregunta.texto, "seleccionada": pregunta.seleccionada}
 
     if data.texto is not None:
@@ -70,6 +73,11 @@ def select_questions_for_test(
     if not evaluacion:
         raise HTTPException(status_code=404, detail="Evaluación no encontrada")
 
+    check_course_access(evaluacion.trabajo.estudiante.asignatura_id, current_user, db, write=True)
+    assert_editable(evaluacion, db)
+    valid_ids = {q.id for q in evaluacion.preguntas}
+    if not req.pregunta_ids or len(set(req.pregunta_ids)) != len(req.pregunta_ids) or not set(req.pregunta_ids) <= valid_ids:
+        raise HTTPException(422, "Seleccione preguntas únicas pertenecientes a esta evaluación")
     # Mark all questions for this eval as unselected first
     for q in evaluacion.preguntas:
         q.seleccionada = (q.id in req.pregunta_ids)
@@ -89,3 +97,8 @@ def select_questions_for_test(
         "status": "success",
         "mensaje": f"Se han seleccionado {len(req.pregunta_ids)} preguntas para el Flash Test"
     }
+
+
+def assert_editable(evaluacion, db):
+    if db.query(models.FlashTest).filter_by(estudiante_id=evaluacion.trabajo.estudiante_id, actividad_id=evaluacion.trabajo.actividad_id).first():
+        raise HTTPException(409, "El test ya fue despachado; sus preguntas no pueden modificarse")

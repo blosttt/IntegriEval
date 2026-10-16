@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
-from backend.app.auth import get_current_user, check_course_access
+from backend.app.auth import get_current_user, check_course_access, check_roster_access
 from backend.app.audit import log_audit
 
 router = APIRouter(tags=["Estudiantes"])
@@ -19,7 +19,7 @@ def list_estudiantes(
 ):
     """List all students registered in a course (RF-002)"""
     check_course_access(asignatura_id, current_user, db)
-    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id).all()
+    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).all()
     
     result = []
     for s in students:
@@ -53,14 +53,14 @@ async def upload_csv_estudiantes(
     Supported columns: nombre, correo / email, rut (opcional).
     Delimiters handled: comma (,) or semicolon (;).
     """
-    course = check_course_access(asignatura_id, current_user, db)
+    course = check_roster_access(asignatura_id, current_user, db)
 
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="El archivo subido debe ser un archivo de texto .csv")
 
     content_bytes = await file.read()
     try:
-        content_text = content_bytes.decode("utf-8")
+        content_text = content_bytes.decode("utf-8-sig")
     except UnicodeDecodeError:
         content_text = content_bytes.decode("latin-1")
 
@@ -92,7 +92,7 @@ async def upload_csv_estudiantes(
     # Existing emails in this subject
     existing_emails = set(
         e[0].lower() for e in db.query(models.Estudiante.correo)
-        .filter(models.Estudiante.asignatura_id == asignatura_id).all()
+        .filter(models.Estudiante.asignatura_id == asignatura_id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).all()
     )
 
     total_procesados = 0
@@ -105,9 +105,9 @@ async def upload_csv_estudiantes(
 
     for idx, row in enumerate(reader, start=2):
         total_procesados += 1
-        raw_name = row.get(header_map["nombre"], "").strip()
-        raw_email = row.get(header_map["correo"], "").strip().lower()
-        raw_rut = row.get(header_map.get("rut", ""), "").strip() if "rut" in header_map else None
+        raw_name = (row.get(header_map["nombre"]) or "").strip()
+        raw_email = (row.get(header_map["correo"]) or "").strip().lower()
+        raw_rut = (row.get(header_map.get("rut", "")) or "").strip() if "rut" in header_map else None
 
         if not raw_name or not raw_email:
             errores.append(f"Fila {idx}: Faltan campos requeridos (nombre o correo).")

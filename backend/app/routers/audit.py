@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
@@ -9,7 +9,8 @@ router = APIRouter(prefix="/api/audit", tags=["Auditoría Inmutable"])
 
 @router.get("", response_model=List[schemas.AuditLogOut])
 def get_audit_logs(
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -21,7 +22,7 @@ def get_audit_logs(
     if current_user.rol != "admin":
         query = query.filter(models.AuditLog.usuario_id == current_user.id)
 
-    logs = query.limit(limit).all()
+    logs = query.offset(offset).limit(limit).all()
 
     result = []
     for l in logs:

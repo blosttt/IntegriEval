@@ -10,7 +10,8 @@ async def send_flash_test_email(
     student_email: str,
     course_name: str,
     test_link: str,
-    validity_hours: int = 48
+    validity_hours: int = 48,
+    seconds_per_question: int = 60
 ) -> bool:
     """
     Sends Flash Test invitation email via Gmail SMTP TLS (RF-010, RI-002).
@@ -45,7 +46,7 @@ async def send_flash_test_email(
           <strong>Reglas del Test:</strong>
           <ul style="margin: 6px 0 0 0; padding-left: 20px;">
             <li>El enlace es de <strong>uso único</strong> y expira en {validity_hours} horas.</li>
-            <li>Cuenta con un temporizador activo (60 segundos por pregunta/test).</li>
+            <li>Cuenta con un temporizador activo ({seconds_per_question} segundos por pregunta).</li>
             <li>Si el tiempo expira, sus respuestas parciales serán registradas automáticamente.</li>
           </ul>
         </div>
@@ -69,7 +70,7 @@ async def send_flash_test_email(
 
     if not settings.SMTP_ENABLED or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.info(f"[SIMULADOR SMTP] Despacho Flash Test a {student_email}: {test_link}")
-        return True
+        return False
 
     message = EmailMessage()
     message["From"] = settings.SMTP_FROM or settings.SMTP_USER

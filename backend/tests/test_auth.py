@@ -8,9 +8,9 @@ def test_bcrypt_hashing_and_verification():
     assert verify_password(raw_pass, hashed) is True
     assert verify_password("WrongPassword", hashed) is False
 
-def test_user_registration_and_login(client):
+def test_user_registration_and_login(client, seeded_admin):
     # 1. Register new teacher
-    reg_resp = client.post("/api/auth/register", json={
+    reg_resp = client.post("/api/auth/register", headers={"Authorization": "Bearer " + create_access_token({"sub": str(seeded_admin.id)})}, json={
         "nombre": "Benjamin Sobarzo",
         "correo": "benjamin@universidad.cl",
         "contrasena": "Admin2026!",

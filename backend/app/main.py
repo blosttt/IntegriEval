@@ -20,13 +20,19 @@ from backend.app.routers import (
     preguntas,
     flash_test,
     panel,
-    audit
+    audit,
+    gestion,
+    admin
 )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB tables
     Base.metadata.create_all(bind=engine)
+    from backend.app.migrations import upgrade_activities
+    upgrade_activities(engine)
+    from backend.app.database import protect_audit_logs
+    protect_audit_logs()
     
     # Seed demo users if they don't exist
     db: Session = SessionLocal()
@@ -87,10 +93,24 @@ async def lifespan(app: FastAPI):
             db.add(ayudante)
             db.commit()
 
+        # Demo assistant is explicitly assigned to the demo teacher's course.
+        demo_course = db.query(models.Asignatura).filter_by(docente_id=teacher.id).first()
+        if demo_course and not db.get(models.CourseAssistant, (demo_course.id, ayudante.id)):
+            db.add(models.CourseAssistant(asignatura_id=demo_course.id, usuario_id=ayudante.id))
+            db.commit()
     finally:
         db.close()
 
-    yield
+    import asyncio
+    from contextlib import suppress
+    from backend.app.routers.flash_test import sweep_active_tests
+    timer_task = asyncio.create_task(sweep_active_tests(SessionLocal))
+    try:
+        yield
+    finally:
+        timer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await timer_task
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -118,6 +138,10 @@ app.include_router(preguntas.router)
 app.include_router(flash_test.router)
 app.include_router(panel.router)
 app.include_router(audit.router)
+app.include_router(gestion.router)
+app.include_router(admin.router)
+from backend.app.routers import actividades
+app.include_router(actividades.router)
 
 # Mount Static Files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"

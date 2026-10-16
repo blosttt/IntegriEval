@@ -2,13 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
-from backend.app.auth import hash_password, verify_password, create_access_token, get_current_user
+from backend.app.auth import hash_password, verify_password, create_access_token, get_current_user, require_admin
 from backend.app.audit import log_audit
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 
 @router.post("/register", response_model=schemas.TokenResponse)
-def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user_data: schemas.UserCreate, db: Session = Depends(get_db), admin: models.Usuario = Depends(require_admin)):
+    user_data.correo = str(user_data.correo).lower()
     # Check if user email already exists
     existing = db.query(models.Usuario).filter(models.Usuario.correo == user_data.correo).first()
     if existing:
@@ -30,7 +31,7 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
         accion="REGISTRO_DOCENTE",
         tabla="usuarios",
         registro_id=new_user.id,
-        usuario_id=new_user.id,
+        usuario_id=admin.id,
         datos_nuevos={"nombre": new_user.nombre, "correo": new_user.correo, "rol": new_user.rol}
     )
 
@@ -43,7 +44,11 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.TokenResponse)
 def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
-    user = db.query(models.Usuario).filter(models.Usuario.correo == login_data.correo).first()
+    user = db.query(models.Usuario).filter(models.Usuario.correo == str(login_data.correo).lower()).first()
+    if user:
+        account = db.get(models.AccountStatus, user.id)
+        if account and not account.active:
+            raise HTTPException(403, "La cuenta está desactivada")
     if not user or not verify_password(login_data.contrasena, user.contrasena):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

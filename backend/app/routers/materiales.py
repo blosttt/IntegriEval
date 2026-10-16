@@ -34,8 +34,10 @@ async def upload_material(
     """
     Upload course support material (Syllabus, Rubric, Guide) and convert to Markdown for LLM prompt injection (RF-004)
     """
-    check_course_access(asignatura_id, current_user, db)
+    check_course_access(asignatura_id, current_user, db, write=True)
 
+    if tipo not in {"syllabus", "rubrica", "guia", "otro"} or not nombre.strip():
+        raise HTTPException(422, "Nombre o tipo de material inválido")
     file_ext = os.path.splitext(file.filename)[1].lower()
     allowed_exts = [".pdf", ".md", ".txt", ".markdown"]
     if file_ext not in allowed_exts:
@@ -47,7 +49,7 @@ async def upload_material(
     # Save file to disk
     course_mat_dir = settings.MATERIALS_DIR / f"course_{asignatura_id}"
     os.makedirs(course_mat_dir, exist_ok=True)
-    saved_path = course_mat_dir / f"{tipo}_{file.filename}"
+    saved_path = course_mat_dir / f"{tipo}_{__import__('uuid').uuid4().hex}{file_ext}"
 
     with open(saved_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -57,7 +59,8 @@ async def upload_material(
         try:
             markdown_content = extract_pdf_to_markdown(str(saved_path))
         except Exception as e:
-            markdown_content = f"# {nombre}\n\nError extrayendo PDF estructurado: {e}"
+            saved_path.unlink(missing_ok=True)
+            raise HTTPException(422, "No se pudo extraer el PDF") from e
     else:
         with open(saved_path, "r", encoding="utf-8", errors="replace") as f:
             markdown_content = f.read()

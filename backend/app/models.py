@@ -63,7 +63,7 @@ class Estudiante(Base):
     fecha_creacion = Column(DateTime, default=utc_now)
 
     asignatura = relationship("Asignatura", back_populates="estudiantes")
-    trabajo = relationship("Trabajo", back_populates="estudiante", uselist=False, cascade="all, delete-orphan")
+    trabajo = relationship("Trabajo", back_populates="estudiante", uselist=False, cascade="all, delete-orphan", primaryjoin="and_(Estudiante.id == Trabajo.estudiante_id, Trabajo.actividad_id == None)")
     flash_tests = relationship("FlashTest", back_populates="estudiante", cascade="all, delete-orphan")
     citas = relationship("Cita", back_populates="estudiante", cascade="all, delete-orphan")
 
@@ -84,7 +84,9 @@ class Trabajo(Base):
     __tablename__ = "trabajos"
 
     id = Column(Integer, primary_key=True, index=True)
-    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), unique=True, nullable=False)
+    __table_args__ = (UniqueConstraint("estudiante_id", "actividad_id", name="uq_trabajo_actividad"),)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    actividad_id = Column(Integer, ForeignKey("actividades.id"), nullable=True)
     pdf_path = Column(String(500), nullable=True)
     markdown = Column(Text, nullable=True)
     estado = Column(String(50), default="cargado")  # cargado, analizado, error
@@ -125,6 +127,7 @@ class FlashTest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    actividad_id = Column(Integer, ForeignKey("actividades.id"), nullable=True)
     token = Column(String(100), unique=True, index=True, default=lambda: str(uuid.uuid4()))  # UUIDv4 (RFC 4122)
     vigencia = Column(DateTime, default=default_vigencia)  # 48 horas (RN-001)
     respuestas = Column(JSON, default=dict)  # {"P1": "A", "P2": "B"}
@@ -148,6 +151,7 @@ class Cita(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    actividad_id = Column(Integer, ForeignKey("actividades.id"), nullable=True)
     docente_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     fecha = Column(DateTime, nullable=False)
     bloque = Column(String(50), nullable=False)  # ej: "10:00 - 10:15"
@@ -172,3 +176,52 @@ class AuditLog(Base):
     datos_nuevos = Column(JSON, nullable=True)
 
     usuario = relationship("Usuario", back_populates="auditorias")
+
+
+class CourseAssistant(Base):
+    __tablename__ = "course_assistants"
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+
+
+class FlashTestState(Base):
+    __tablename__ = "flash_test_states"
+    test_id = Column(Integer, ForeignKey("flash_tests.id"), primary_key=True)
+    preguntas = Column(JSON, nullable=False)
+    indice = Column(Integer, default=0, nullable=False)
+    inicio_pregunta = Column(DateTime, nullable=True)
+
+
+class TeacherAvailability(Base):
+    __tablename__ = "teacher_availability"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    day_of_week = Column(Integer, nullable=False)
+    start_time = Column(String(5), nullable=False)
+    end_time = Column(String(5), nullable=False)
+
+
+class CourseTeacher(Base):
+    __tablename__ = "course_teachers"
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+
+
+class AccountStatus(Base):
+    __tablename__ = "account_status"
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+    active = Column(Boolean, nullable=False, default=True)
+
+
+class StudentStatus(Base):
+    __tablename__ = "student_status"
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), primary_key=True)
+    active = Column(Boolean, nullable=False, default=True)
+
+
+class Actividad(Base):
+    __tablename__ = "actividades"
+    id = Column(Integer, primary_key=True)
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), nullable=False)
+    titulo = Column(String(150), nullable=False)
+    parametros = Column(JSON, nullable=False, default=dict)

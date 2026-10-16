@@ -57,26 +57,34 @@ def match_student_filename(filename: str, student_names_emails: list[dict]) -> O
     Fuzzy match PDF filename to student roster by name, email, or rut (RF-005)
     student_names_emails = [{'id': 1, 'nombre': 'Juan Perez', 'correo': 'juan.perez@alumnos.cl', 'rut': '20.123.456-7'}]
     """
-    normalized_fname = re.sub(r"[^a-zA-Z0-9]", " ", filename.lower())
-    
-    # 1. Exact match on email prefix
-    for s in student_names_emails:
-        email_prefix = s['correo'].split('@')[0].lower()
-        if email_prefix in normalized_fname:
-            return s['id']
-            
-    # 2. Match on rut if available
-    for s in student_names_emails:
-        if s.get('rut'):
-            clean_rut = re.sub(r"[^0-9kK]", "", s['rut']).lower()
-            if clean_rut and clean_rut in normalized_fname.replace(" ", ""):
-                return s['id']
-
-    # 3. Match on surname or first name combination
-    for s in student_names_emails:
-        parts = [p.lower() for p in s['nombre'].split() if len(p) > 2]
-        matches = sum(1 for p in parts if p in normalized_fname)
-        if matches >= 2 or (len(parts) == 1 and matches == 1):
-            return s['id']
-
+    import unicodedata
+    def normalize(value):
+        text = unicodedata.normalize('NFKD', value.lower())
+        text = ''.join(c for c in text if not unicodedata.combining(c))
+        return re.sub(r'[^a-z0-9]', ' ', text)
+    filename_normal = normalize(Path(filename).stem)
+    compact = filename_normal.replace(' ', '')
+    for key in ('correo', 'rut'):
+        matches = []
+        for student in student_names_emails:
+            value = student.get(key) or ''
+            if key == 'correo':
+                value = value.split('@')[0]
+            normalized = normalize(value).replace(' ', '')
+            if normalized and normalized in compact:
+                matches.append(student['id'])
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            return None
+    tokens = set(filename_normal.split())
+    scores = []
+    for student in student_names_emails:
+        parts = {p for p in normalize(student['nombre']).split() if len(p) > 2}
+        score = len(parts & tokens)
+        if score >= 2 or (len(parts) == 1 and score == 1):
+            scores.append((score, student['id']))
+    scores.sort(reverse=True)
+    if scores and (len(scores) == 1 or scores[0][0] > scores[1][0]):
+        return scores[0][1]
     return None

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request, status, Body
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
@@ -10,6 +10,8 @@ from backend.app.auth import get_current_user, check_course_access
 from backend.app.services.email_service import send_flash_test_email
 from backend.app.services.websocket_mgr import ws_manager
 from backend.app.audit import log_audit
+
+from backend.app.activities import parameters, work_for, test_evaluation
 
 router = APIRouter(tags=["Flash Test en Tiempo Real"])
 
@@ -24,16 +26,23 @@ def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
 async def dispatch_flash_tests(
     asignatura_id: int,
     request: Request,
+    estudiante_ids: Optional[List[int]] = Body(default=None),
+    actividad_id: Optional[int] = None,
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Despacho masivo o individual de tokens UUIDv4 con vigencia 48h vía Gmail SMTP (RF-010, RN-001).
     """
-    course = check_course_access(asignatura_id, current_user, db)
-    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id).all()
+    course = check_course_access(asignatura_id, current_user, db, write=True)
+    students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).all()
+    if estudiante_ids is not None:
+        valid_ids = {s.id for s in students}
+        if not estudiante_ids or not set(estudiante_ids) <= valid_ids:
+            raise HTTPException(422, "Seleccione estudiantes de esta asignatura")
+        students = [s for s in students if s.id in estudiante_ids]
     
-    course_params = course.parametros or {}
+    course_params = parameters(course, actividad_id, db)
     tiempo_segundos = int(course_params.get("tiempo_test_segundos", 60))
     base_url = str(request.base_url).rstrip("/")
 
@@ -41,12 +50,18 @@ async def dispatch_flash_tests(
     
     for s in students:
         # Check student has evaluated work
-        if not s.trabajo or not s.trabajo.evaluacion:
+        work = work_for(s.id, actividad_id, db)
+        if not work or not work.evaluacion:
             continue
 
+        if not any(q.seleccionada for q in work.evaluacion.preguntas):
+            continue
+        if db.query(models.FlashTest).filter_by(estudiante_id=s.id, actividad_id=actividad_id, estado="completado").first():
+            continue
         # Check if an active test already exists
         existing_test = db.query(models.FlashTest).filter(
             models.FlashTest.estudiante_id == s.id,
+            models.FlashTest.actividad_id == actividad_id,
             models.FlashTest.estado.in_(["pendiente", "en_progreso"])
         ).first()
 
@@ -58,6 +73,7 @@ async def dispatch_flash_tests(
             token = str(uuid.uuid4())
             flash_test = models.FlashTest(
                 estudiante_id=s.id,
+                actividad_id=actividad_id,
                 token=token,
                 vigencia=now + timedelta(hours=48),
                 tiempo_limite_segundos=tiempo_segundos,
@@ -67,21 +83,26 @@ async def dispatch_flash_tests(
             db.commit()
             db.refresh(flash_test)
 
+        get_state(flash_test, db)
+        db.commit()
         test_link = f"{base_url}/test/{token}"
         email_sent = await send_flash_test_email(
             student_name=s.nombre,
             student_email=s.correo,
             course_name=course.nombre,
-            test_link=test_link
+            test_link=test_link,
+            seconds_per_question=flash_test.tiempo_limite_segundos
         )
 
         dispatched_items.append(
             schemas.FlashTestDispatchItem(
                 estudiante_id=s.id,
+                actividad_id=actividad_id,
                 token=token,
                 correo=s.correo,
                 enlace_test=test_link,
-                correo_enviado=email_sent
+                correo_enviado=email_sent,
+                error=None if email_sent else ("SMTP desactivado: utilice el enlace local" if not settings.SMTP_ENABLED else "No se pudo enviar el correo; utilice el enlace")
             )
         )
 
@@ -99,60 +120,6 @@ async def dispatch_flash_tests(
         items=dispatched_items
     )
 
-@router.get("/api/flash-test/{token}/info", response_model=schemas.FlashTestPublicInfo)
-def get_flash_test_info(token: str, db: Session = Depends(get_db)):
-    """
-    Public student endpoint (Zero-login via Token, RN-001).
-    Validates token and returns questions without revealing correct answer.
-    """
-    test = db.query(models.FlashTest).filter(models.FlashTest.token == token).first()
-    if not test:
-        raise HTTPException(status_code=404, detail="Enlace de verificación inválido o inexistente")
-
-    now = datetime.now(timezone.utc)
-    if test.estado == "completado":
-        raise HTTPException(status_code=400, detail="Este Flash Test ya ha sido completado y cerrado.")
-
-    if ensure_utc(test.vigencia) < now:
-        test.estado = "expirado"
-        db.commit()
-        raise HTTPException(status_code=400, detail="Este enlace ha expirado (vigencia 48h superada).")
-
-    student = test.estudiante
-    course = student.asignatura
-    evaluacion = student.trabajo.evaluacion if student.trabajo else None
-    
-    if not evaluacion:
-        raise HTTPException(status_code=400, detail="No hay evaluación asociada a este test.")
-
-    # Get selected questions
-    selected_questions = [q for q in evaluacion.preguntas if q.seleccionada]
-    if not selected_questions:
-        selected_questions = evaluacion.preguntas[:5]
-
-    safe_questions = []
-    for q in selected_questions:
-        safe_alts = [{"id": a["id"], "texto": a["texto"]} for a in q.alternativas]
-        safe_questions.append({
-            "id": q.id,
-            "texto": q.texto,
-            "seccion_origen": q.seccion_origen,
-            "alternativas": safe_alts
-        })
-
-    session = ws_manager.get_or_create_session(token, test.tiempo_limite_segundos)
-    remaining = session.remaining_seconds if session.is_active else test.tiempo_limite_segundos
-
-    return schemas.FlashTestPublicInfo(
-        token=token,
-        estudiante_nombre=student.nombre,
-        asignatura_nombre=course.nombre,
-        tiempo_limite_segundos=test.tiempo_limite_segundos,
-        tiempo_restante_segundos=remaining,
-        estado=test.estado,
-        preguntas=safe_questions
-    )
-
 def evaluate_and_close_test(
     test: models.FlashTest,
     respuestas: Dict[str, str],
@@ -163,10 +130,12 @@ def evaluate_and_close_test(
     Computes score and coherence based on answered questions (RN-002).
     Updates student's evaluation with real Flash Test results.
     """
-    evaluacion = test.estudiante.trabajo.evaluacion
-    selected_questions = [q for q in evaluacion.preguntas if q.seleccionada]
-    if not selected_questions:
-        selected_questions = evaluacion.preguntas[:5]
+    if test.estado == "completado":
+        return test.puntaje
+    evaluacion = test_evaluation(test, db)
+    state = get_state(test, db)
+    from types import SimpleNamespace
+    selected_questions = [SimpleNamespace(**q) for q in state.preguntas]
 
     total_preguntas = len(selected_questions)
     correctas = 0
@@ -193,7 +162,7 @@ def evaluate_and_close_test(
     # Update Anexo A evaluacion_respuestas in Evaluacion.desglose
     if evaluacion.desglose:
         updated_desglose = dict(evaluacion.desglose)
-        course_params = test.estudiante.asignatura.parametros or {}
+        course_params = parameters(test.estudiante.asignatura, test.actividad_id, db)
         umbral_coherencia = float(course_params.get("umbral_coherencia", 60.0))
         umbral_ia = float(course_params.get("umbral_ia", 40.0))
         
@@ -216,115 +185,200 @@ def evaluate_and_close_test(
     db.commit()
     return score
 
-@router.post("/api/flash-test/{token}/submit")
-async def submit_flash_test(
-    token: str,
-    payload: schemas.SubmitAnswerRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Submit Flash Test via HTTP (or automatic on timer expiry, RN-002)
-    """
-    test = db.query(models.FlashTest).filter(models.FlashTest.token == token).first()
+
+def get_state(test, db):
+    state = db.get(models.FlashTestState, test.id)
+    if state is None:
+        evaluation = test_evaluation(test, db)
+        if not evaluation:
+            raise HTTPException(409, "No hay evaluación asociada")
+        selected = [q for q in evaluation.preguntas if q.seleccionada]
+        if not selected:
+            raise HTTPException(409, "Seleccione preguntas antes del despacho")
+        state = models.FlashTestState(test_id=test.id, preguntas=[{
+            "id": q.id, "texto": q.texto, "alternativas": q.alternativas,
+            "seccion_origen": q.seccion_origen
+        } for q in selected], indice=0)
+        db.add(state)
+        db.flush()
+    return state
+
+
+def advance_time(test, state, db):
+    now = datetime.now(timezone.utc)
+    if test.estado in {"completado", "expirado"}:
+        return
+    if ensure_utc(test.vigencia) <= now:
+        test.estado = "expirado"
+        db.commit()
+        return
+    if not state.inicio_pregunta:
+        return
+    while state.indice < len(state.preguntas) and (now - ensure_utc(state.inicio_pregunta)).total_seconds() >= test.tiempo_limite_segundos:
+        state.indice += 1
+        state.inicio_pregunta = ensure_utc(state.inicio_pregunta) + timedelta(seconds=test.tiempo_limite_segundos)
+    if state.indice == len(state.preguntas):
+        elapsed = int((now - ensure_utc(test.fecha_inicio)).total_seconds())
+        evaluate_and_close_test(test, test.respuestas or {}, elapsed, db)
+    db.commit()
+
+
+def load_test(token, db, allow_completed=False):
+    test = db.query(models.FlashTest).filter_by(token=token).first()
     if not test:
-        raise HTTPException(status_code=404, detail="Test no encontrado")
-    if test.estado == "completado":
-        return {"status": "already_completed", "puntaje": test.puntaje}
+        raise HTTPException(404, "Test no encontrado")
+    student_status = db.get(models.StudentStatus, test.estudiante_id)
+    if (student_status and not student_status.active) or (test.estudiante.asignatura.parametros or {}).get('_archived'):
+        raise HTTPException(410, "El enlace de esta evaluación ya no está activo")
+    state = get_state(test, db)
+    advance_time(test, state, db)
+    if test.estado == "expirado":
+        raise HTTPException(410, "El enlace ha expirado")
+    if test.estado == "completado" and not allow_completed:
+        raise HTTPException(409, "Este test ya ha sido completado")
+    return test, state
 
-    score = evaluate_and_close_test(test, payload.respuestas, payload.tiempo_transcurrido, db)
 
-    # Broadcast to student WebSocket and teacher dashboard
-    await ws_manager.broadcast_to_session(token, {
-        "type": "TEST_COMPLETED",
-        "score": score,
-        "message": "Flash Test finalizado con éxito"
-    })
-    await ws_manager.notify_teacher_dashboard(test.estudiante.asignatura_id, {
-        "type": "STUDENT_TEST_FINISHED",
-        "estudiante_id": test.estudiante_id,
-        "score": score
-    })
-
+def public_state(test, state):
+    remaining = test.tiempo_limite_segundos
+    if state.inicio_pregunta:
+        remaining = max(0, remaining - int((datetime.now(timezone.utc) - ensure_utc(state.inicio_pregunta)).total_seconds()))
     return {
-        "status": "success",
-        "puntaje": score,
-        "mensaje": "Respuestas registradas exitosamente"
+        "token": test.token, "estudiante_nombre": test.estudiante.nombre,
+        "asignatura_nombre": test.estudiante.asignatura.nombre,
+        "asignatura_periodo": test.estudiante.asignatura.periodo,
+        "tiempo_limite_segundos": test.tiempo_limite_segundos,
+        "tiempo_restante_segundos": remaining, "tiempo_segundos": test.tiempo_limite_segundos,
+        "num_preguntas": len(state.preguntas), "pregunta_actual": state.indice,
+        "estado": test.estado, "respuestas": test.respuestas or {},
+        "puntaje": test.puntaje,
+        "preguntas": [{**q, "alternativas": [{"id": a["id"], "texto": a["texto"]} for a in q["alternativas"]]} for q in state.preguntas]
     }
+
+
+async def notify_result(test):
+    await ws_manager.notify_teacher_dashboard(test.estudiante.asignatura_id, {
+        "type": "STUDENT_TEST_FINISHED", "estudiante_id": test.estudiante_id, "score": test.puntaje
+    })
+    await ws_manager.broadcast_to_session(test.token, {"type": "TEST_COMPLETED", "score": test.puntaje})
+
+
+@router.get("/api/flash-test/{token}/info")
+def get_flash_test_info(token: str, db: Session = Depends(get_db)):
+    test, state = load_test(token, db, allow_completed=True)
+    return public_state(test, state)
+
+
+@router.post("/api/flash-test/{token}/start")
+def start_flash_test(token: str, db: Session = Depends(get_db)):
+    test, state = load_test(token, db, allow_completed=True)
+    if test.estado == "pendiente":
+        test.estado = "en_progreso"
+        test.fecha_inicio = datetime.now(timezone.utc)
+        state.inicio_pregunta = test.fecha_inicio
+        db.commit()
+    return public_state(test, state)
+
+
+from pydantic import BaseModel
+class AnswerRequest(BaseModel):
+    question_id: int
+    answer: Optional[str] = None
+
+
+async def record_answer(token, payload, db):
+    test, state = load_test(token, db, allow_completed=True)
+    if test.estado == "completado":
+        return public_state(test, state)
+    if test.estado != "en_progreso":
+        raise HTTPException(409, "Inicie el test antes de responder")
+    q = state.preguntas[state.indice]
+    if payload.question_id != q["id"]:
+        # A repeated delivery may arrive after a successful save.
+        if str(payload.question_id) in (test.respuestas or {}):
+            return public_state(test, state)
+        raise HTTPException(409, "La pregunta ya no está activa")
+    if payload.answer is not None and payload.answer not in {a["id"] for a in q["alternativas"]}:
+        raise HTTPException(422, "Alternativa inválida")
+    test.respuestas = {**(test.respuestas or {}), str(q["id"]): payload.answer}
+    state.indice += 1
+    state.inicio_pregunta = datetime.now(timezone.utc)
+    if state.indice == len(state.preguntas):
+        evaluate_and_close_test(test, test.respuestas, int((datetime.now(timezone.utc) - ensure_utc(test.fecha_inicio)).total_seconds()), db)
+        await notify_result(test)
+    db.commit()
+    return public_state(test, state)
+
+
+@router.post("/api/flash-test/{token}/answer")
+async def answer_flash_test(token: str, payload: AnswerRequest, db: Session = Depends(get_db)):
+    return await record_answer(token, payload, db)
+
+
+@router.post("/api/flash-test/{token}/submit")
+async def submit_flash_test(token: str, payload: schemas.SubmitAnswerRequest, db: Session = Depends(get_db)):
+    if payload.token != token:
+        raise HTTPException(422, "El token no coincide con el enlace")
+    test, state = load_test(token, db, allow_completed=True)
+    if test.estado != "completado":
+        if test.estado != "en_progreso":
+            raise HTTPException(409, "El test no ha sido iniciado")
+        # Only answers already received while their question was active are scored.
+        evaluate_and_close_test(test, test.respuestas or {}, int((datetime.now(timezone.utc) - ensure_utc(test.fecha_inicio)).total_seconds()), db)
+        await notify_result(test)
+    return {"status": "success", "puntaje": test.puntaje, "porcentaje_logro": test.puntaje, "tiempo_transcurrido": test.tiempo_transcurrido,
+            "respuestas_correctas": sum(1 for q in state.preguntas for a in q["alternativas"] if a.get("es_correcta") and (test.respuestas or {}).get(str(q["id"])) == a["id"])}
+
 
 @router.websocket("/ws/flash-test/{token}")
 async def websocket_flash_test(websocket: WebSocket, token: str, db: Session = Depends(get_db)):
-    """
-    Real-time WebSocket endpoint for Flash Test (RF-011, RNF-001, RN-002, RNF-008)
-    - Sub-50ms latency response
-    - 60s live countdown
-    - Resilient reconnection (preserves state <= 120s)
-    - Automatic partial scoring on expiration
-    """
-    test = db.query(models.FlashTest).filter(models.FlashTest.token == token).first()
-    if not test or test.estado == "completado":
-        await websocket.accept()
-        await websocket.send_json({"type": "ERROR", "message": "Test no válido o ya completado"})
-        await websocket.close()
-        return
-
-    session = await ws_manager.connect_student(websocket, token, test.tiempo_limite_segundos)
-
+    import asyncio
     try:
-        # Send initial state
-        await websocket.send_json({
-            "type": "INIT_STATE",
-            "is_active": session.is_active,
-            "remaining_seconds": session.remaining_seconds if session.is_active else test.tiempo_limite_segundos,
-            "answers": session.answers
-        })
-
+        test, state = load_test(token, db, allow_completed=True)
+    except HTTPException:
+        await websocket.close(code=1008)
+        return
+    await ws_manager.connect_student(websocket, token, test.tiempo_limite_segundos)
+    try:
         while True:
-            data = await websocket.receive_json()
-            msg_type = data.get("type")
-
-            if msg_type == "START_TIMER":
-                if not session.is_active:
-                    session.is_active = True
-                    session.start_time = datetime.now(timezone.utc).timestamp()
-                    test.estado = "en_progreso"
-                    test.fecha_inicio = datetime.now(timezone.utc)
-                    db.commit()
-
-                await ws_manager.broadcast_to_session(token, {
-                    "type": "TIMER_TICK",
-                    "remaining_seconds": session.remaining_seconds
-                })
-
-            elif msg_type == "ANSWER_CHANGE":
-                # Real-time state preservation (RNF-008)
-                q_id = str(data.get("question_id"))
-                ans = data.get("answer")
-                session.answers[q_id] = ans
-                await websocket.send_json({"type": "ACK", "question_id": q_id})
-
-            elif msg_type == "PING":
-                # Latency measurement (RNF-001 <= 50ms)
-                await websocket.send_json({"type": "PONG", "ts": data.get("ts")})
-
-            elif msg_type == "SUBMIT" or msg_type == "TIME_EXPIRED":
-                # Finish test and score partial or full (RN-002)
-                answers = data.get("answers", session.answers)
-                elapsed = session.elapsed_seconds
-                score = evaluate_and_close_test(test, answers, elapsed, db)
-                session.is_completed = True
-
-                await ws_manager.broadcast_to_session(token, {
-                    "type": "TEST_COMPLETED",
-                    "score": score
-                })
-                await ws_manager.notify_teacher_dashboard(test.estudiante.asignatura_id, {
-                    "type": "STUDENT_TEST_FINISHED",
-                    "estudiante_id": test.estudiante_id,
-                    "score": score
-                })
+            db.expire_all()
+            test, state = load_test(token, db, allow_completed=True)
+            await websocket.send_json({"type": "STATE", **public_state(test, state)})
+            if test.estado == "completado":
+                await notify_result(test)
                 break
+            try:
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=1)
+            except asyncio.TimeoutError:
+                continue
+            kind = data.get("type")
+            if kind == "PING":
+                await websocket.send_json({"type": "PONG", "ts": data.get("ts")})
+            elif kind == "START_TIMER":
+                start_flash_test(token, db)
+            elif kind == "ANSWER_CHANGE":
+                await record_answer(token, AnswerRequest(question_id=data.get("question_id"), answer=data.get("answer")), db)
+    except (WebSocketDisconnect, HTTPException):
+        pass
+    finally:
+        ws_manager.disconnect_student(websocket, token)
 
-    except WebSocketDisconnect:
-        ws_manager.disconnect_student(websocket, token)
-    except Exception as e:
-        ws_manager.disconnect_student(websocket, token)
+
+async def sweep_active_tests(session_factory):
+    """Persist timeouts even when the student's browser is disconnected."""
+    import asyncio
+    import logging
+    while True:
+        await asyncio.sleep(1)
+        with session_factory() as db:
+            tests = db.query(models.FlashTest).filter_by(estado="en_progreso").all()
+            for test in tests:
+                try:
+                    state = get_state(test, db)
+                    before = test.estado
+                    advance_time(test, state, db)
+                    if test.estado == "completado" and before != "completado":
+                        await notify_result(test)
+                except Exception:
+                    db.rollback()
+                    logging.getLogger(__name__).exception("No se pudo actualizar el cronómetro del test %s", test.id)

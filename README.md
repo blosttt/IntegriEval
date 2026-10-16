@@ -1,3 +1,16 @@
+## Interfaz moderna y ejecución local
+
+La interfaz principal está en `frontend-modern` y se sirve en http://127.0.0.1:3000. La API usa http://127.0.0.1:8000.
+
+1. Crear un entorno Python: `python -m venv .venv` e instalar `pip install -r requirements.txt` dentro del entorno.
+2. Copiar `.env.example` a `.env` y configurar una clave `SECRET_KEY` propia. El modo predeterminado usa IA simulada y SMTP desactivado.
+3. En `frontend-modern`, ejecutar `pnpm install` con Node.js compatible con Next.js 16.
+4. En Windows, ejecutar `./run-modern.ps1 -Rebuild` desde la raíz. En otros sistemas, iniciar la API con `python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000` y ejecutar `pnpm build` seguido de `pnpm start` en `frontend-modern`.
+
+El inicio integra los accesos de docente, ayudante y superadmin. Incluye guía contextual, permisos por curso y evaluaciones independientes. Ver [documentación de la interfaz](frontend-modern/README.md).
+
+Para cargar ejemplos sin borrar datos existentes: `python load_demo_data.py`. Los ejemplos usan correos ficticios y no envían mensajes.
+
 # IntegriEval 🎓⚡
 ### Sistema Semi-Automatizado de Evaluación de Integridad Académica, Detección Contextual de IA y Verificación Oral Flash
 

@@ -80,11 +80,18 @@ class WebSocketManager:
     async def notify_teacher_dashboard(self, course_id: int, message: dict):
         if course_id in self.teacher_dashboards:
             dead = set()
-            for ws in self.teacher_dashboards[course_id]:
+            for ws in list(self.teacher_dashboards[course_id]):
                 try:
+                    authorize = getattr(ws.state, "authorize_observer", None)
+                    if authorize:
+                        authorize()
                     await ws.send_json(message)
                 except Exception:
                     dead.add(ws)
+                    try:
+                        await ws.close(code=1008)
+                    except Exception:
+                        pass
             for ws in dead:
                 self.teacher_dashboards[course_id].discard(ws)
 

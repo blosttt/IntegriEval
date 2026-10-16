@@ -93,6 +93,10 @@ def test_full_flash_test_and_cierre_flow(client, db_session, seeded_teacher):
     # 5. Submit Answers (RF-011, RN-002)
     # Student answers all with 'A' (correct answers)
     questions = db_session.query(models.Pregunta).filter(models.Pregunta.evaluacion_id == evaluacion.id).all()
+    assert client.post(f"/api/flash-test/{flash_token}/start").status_code == 200
+    for q in questions:
+        answer_resp = client.post(f"/api/flash-test/{flash_token}/answer", json={"question_id": q.id, "answer": "A"})
+        assert answer_resp.status_code == 200
     sub_resp = client.post(f"/api/flash-test/{flash_token}/submit", json={
         "token": flash_token,
         "respuestas": {str(q.id): "A" for q in questions},

@@ -17,3 +17,12 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def protect_audit_logs():
+    """Prevent audit updates and deletes at the SQLite storage layer."""
+    if engine.dialect.name == "sqlite":
+        from sqlalchemy import text
+        with engine.begin() as connection:
+            for action in ("UPDATE", "DELETE"):
+                connection.execute(text(f"CREATE TRIGGER IF NOT EXISTS audit_no_{action.lower()} BEFORE {action} ON audit_logs BEGIN SELECT RAISE(ABORT, 'audit_logs are append-only'); END"))

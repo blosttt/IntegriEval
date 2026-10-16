@@ -14,6 +14,8 @@ __pycache__/
 # Database & SQLite
 *.db
 *.sqlite3
+*.db-*
+*.db.*.bak
 integrieval.db
 
 # Uploads & temporary artifacts
@@ -40,3 +42,7 @@ Trastorno sintomas*.pdf
 # Node.js dependencies and Next.js generated files
 node_modules/
 .next/
+
+# Modern frontend dependency store and build cache
+.pnpm-store/
+*.tsbuildinfo

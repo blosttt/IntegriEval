@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flash Test — IntegriEval</title>
+  <title>Flash Test — IntegryEval</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -276,7 +276,7 @@
   <div class="ft-brand">
     <div class="ft-logo">IE</div>
     <div>
-      <div class="ft-brand-name">IntegriEval</div>
+      <div class="ft-brand-name">IntegryEval</div>
       <div class="ft-brand-sub">Flash Test · Evaluación auténtica</div>
     </div>
   </div>
@@ -487,179 +487,134 @@
       .forEach(s => document.getElementById(s).style.display = s === id ? "" : "none");
   }
 
-  /* ── Data ───────────────────────────────────────────────────────── */
   const token = location.pathname.split("/").pop();
   document.getElementById("tokenDisplay").textContent = token;
+  let questions = [], answers = {}, currentQ = 0, ws = null, timer = null;
+  let totalSeconds = 60, startTime = Date.now(), finished = false, busy = false;
+  let deadline = 0, started = false;
+  const escapeText = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  let questions = [];
-  let currentQ  = 0;
-  let answers   = [];
-  let ws        = null;
-  let timer     = null;
-  let secondsLeft = 60;
-  let totalSeconds = 60;
-  let startTime = null;
+  async function request(action = 'info', body = null) {
+    const response = await fetch(`/api/flash-test/${encodeURIComponent(token)}/${action}`, {
+      method: body === null ? 'GET' : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: body === null ? null : JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'No se pudo guardar la respuesta');
+    return data;
+  }
 
-  /* ── Init ───────────────────────────────────────────────────────── */
-  window.addEventListener("load", async () => {
-    // Theme
-    const saved = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", saved);
-    document.getElementById("themeBtn").textContent = saved === "dark" ? "☀️" : "🌙";
-
+  window.addEventListener('load', async () => {
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
     try {
-      const info = await fetch(`/api/flash-test/${token}/info`).then(r => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      });
-      document.getElementById("introStudentName").textContent = info.estudiante_nombre;
-      document.getElementById("intoCourse").textContent = `${info.asignatura_nombre} · ${info.asignatura_periodo}`;
-      document.getElementById("introNumPreguntas").textContent = `❓ ${info.num_preguntas} preguntas`;
-      document.getElementById("introTiempo").textContent = `⏱ ${info.tiempo_segundos}s c/u`;
-      totalSeconds = info.tiempo_segundos;
+      const info = await request();
+      document.getElementById('introStudentName').textContent = info.estudiante_nombre;
+      document.getElementById('intoCourse').textContent = `${info.asignatura_nombre} · ${info.asignatura_periodo}`;
+      document.getElementById('introNumPreguntas').textContent = `❓ ${info.num_preguntas} preguntas`;
+      document.getElementById('introTiempo').textContent = `⏱ ${info.tiempo_segundos}s por pregunta`;
       questions = info.preguntas;
-      setState("stateIntro");
-    } catch {
-      setState("stateInvalid");
-    }
+      totalSeconds = info.tiempo_segundos;
+      if (info.estado === 'completado') { await complete(); return; }
+      if (info.estado === 'en_progreso') { started = true; applyState(info); connectWS(); }
+      else setState('stateIntro');
+    } catch (error) { setState('stateInvalid'); }
   });
 
-  /* ── WebSocket ──────────────────────────────────────────────────── */
-  function connectWS() {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}/ws/flash-test/${token}`);
-    ws.onopen = () => {
-      document.getElementById("sessionStatus").innerHTML = "🔒 Conectado en vivo";
-    };
-    ws.onerror = () => {
-      document.getElementById("sessionStatus").innerHTML = "⚠️ Reconectando…";
-    };
-  }
-
-  function sendWS(data) {
-    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
-  }
-
-  /* ── Start test ─────────────────────────────────────────────────── */
-  function startTest() {
-    connectWS();
-    startTime = Date.now();
-    setState("stateQuiz");
-    document.getElementById("timeoutBar").style.display = "";
-    renderQuestion(0);
-  }
-
-  /* ── Timer ──────────────────────────────────────────────────────── */
-  function startTimer() {
-    secondsLeft = totalSeconds;
-    const circumference = 327;
-
-    const ringEl   = document.getElementById("timerRingFg");
-    const secsEl   = document.getElementById("timerSeconds");
-    const fillEl   = document.getElementById("timeoutFill");
-
-    secsEl.textContent = secondsLeft;
-    ringEl.style.strokeDashoffset = "0";
-    fillEl.style.width = "100%";
-    ringEl.classList.remove("critical");
-    fillEl.classList.remove("critical");
-
-    if (timer) clearInterval(timer);
-
-    timer = setInterval(() => {
-      secondsLeft--;
-      secsEl.textContent = secondsLeft;
-
-      const pct    = secondsLeft / totalSeconds;
-      const offset = circumference * (1 - pct);
-      ringEl.style.strokeDashoffset = offset;
-      fillEl.style.width = `${pct * 100}%`;
-
-      if (secondsLeft <= 10) {
-        ringEl.classList.add("critical");
-        fillEl.classList.add("critical");
-        secsEl.style.color = "var(--danger)";
-      }
-
-      if (secondsLeft <= 0) {
-        clearInterval(timer);
-        autoSkip();
-      }
-    }, 1000);
-  }
-
-  /* ── Render question ────────────────────────────────────────────── */
-  function renderQuestion(index) {
-    if (index >= questions.length) { submitAll(); return; }
-    currentQ = index;
-
-    const q = questions[index];
-    const pct = Math.round((index / questions.length) * 100);
-
-    document.getElementById("quizCounter").textContent =
-      `Pregunta ${index + 1} de ${questions.length}`;
-    document.getElementById("quizProgressBar").style.width = `${pct}%`;
-    document.getElementById("quizProgressBar").className =
-      "progress-bar" + (pct >= 60 ? " success" : pct >= 30 ? "" : "");
-    document.getElementById("questionText").textContent = q.texto;
-
-    const letters = ["A","B","C","D","E"];
-    document.getElementById("optionsContainer").innerHTML =
-      q.alternativas.map((alt, i) => `
-        <div class="option-card" onclick="selectAnswer(${index},'${alt.id}')" id="opt_${alt.id}">
-          <div class="option-key">${letters[i] || alt.id}</div>
-          <div class="flex-1 text-sm" style="line-height:1.5;">${alt.texto}</div>
-        </div>`).join("");
-
-    secsEl_refresh();
-    startTimer();
-
-    sendWS({ type: "QUESTION_STARTED", pregunta_idx: index, pregunta_id: q.id });
-  }
-
-  function secsEl_refresh() {
-    document.getElementById("timerSeconds").style.color = "var(--text)";
-  }
-
-  /* ── Select answer ──────────────────────────────────────────────── */
-  function selectAnswer(idx, altId) {
-    if (timer) { clearInterval(timer); timer = null; }
-
-    // Visual feedback
-    document.querySelectorAll(".option-card").forEach(c => c.style.pointerEvents = "none");
-    const selected = document.getElementById(`opt_${altId}`);
-    if (selected) selected.classList.add("selected");
-
-    answers.push({ pregunta_id: questions[idx].id, alternativa_id: altId });
-    sendWS({ type: "ANSWER", pregunta_id: questions[idx].id, alternativa_id: altId });
-
-    setTimeout(() => renderQuestion(idx + 1), 600);
-  }
-
-  /* ── Auto-skip on timeout ───────────────────────────────────────── */
-  function autoSkip() {
-    showToast("Tiempo agotado", "Pasando a la siguiente pregunta…", "warning");
-    answers.push({ pregunta_id: questions[currentQ].id, alternativa_id: null });
-    sendWS({ type: "TIMEOUT", pregunta_id: questions[currentQ].id });
-    setTimeout(() => renderQuestion(currentQ + 1), 400);
-  }
-
-  /* ── Submit all ─────────────────────────────────────────────────── */
-  async function submitAll() {
-    if (timer) { clearInterval(timer); timer = null; }
-    document.getElementById("timeoutBar").style.display = "none";
-
+  async function startTest() {
+    if (busy) return;
+    busy = true;
     try {
-      const res = await fetch(`/api/flash-test/${token}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ respuestas: answers })
-      }).then(r => r.json());
+      started = true;
+      applyState(await request('start', {}));
+      connectWS();
+    } catch (error) { started = false; showToast('Error', error.message, 'error'); }
+    finally { busy = false; }
+  }
 
-      showResults(res);
-    } catch {
-      setState("stateCompleted");
+  function connectWS() {
+    if (finished) return;
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ws/flash-test/${encodeURIComponent(token)}`);
+    ws.onopen = () => { document.getElementById('sessionStatus').textContent = '🔒 Conectado en vivo'; };
+    ws.onmessage = event => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'STATE') applyState(data);
+      if (data.type === 'TEST_COMPLETED') complete();
+    };
+    ws.onclose = () => {
+      if (finished) return;
+      document.getElementById('sessionStatus').textContent = '⚠️ Reconectando…';
+      setTimeout(connectWS, 2000);
+    };
+  }
+
+  function applyState(data) {
+    if (finished) return;
+    answers = data.respuestas || answers;
+    if (data.estado === 'completado') { complete(); return; }
+    if (!started) return;
+    setState('stateQuiz');
+    document.getElementById('timeoutBar').style.display = '';
+    deadline = Date.now() + data.tiempo_restante_segundos * 1000;
+    const changed = currentQ !== data.pregunta_actual || !document.getElementById('optionsContainer').children.length;
+    currentQ = data.pregunta_actual;
+    if (changed) renderQuestion(currentQ);
+    if (!timer) timer = setInterval(updateTimer, 250);
+    updateTimer();
+  }
+
+  function renderQuestion(index) {
+    const q = questions[index];
+    if (!q) return;
+    document.getElementById('quizCounter').textContent = `Pregunta ${index + 1} de ${questions.length}`;
+    document.getElementById('quizProgressBar').style.width = `${index / questions.length * 100}%`;
+    document.getElementById('questionText').textContent = q.texto;
+    const container = document.getElementById('optionsContainer');
+    container.replaceChildren();
+    q.alternativas.forEach(alt => {
+      const card = document.createElement('button');
+      card.className = 'option-card';
+      card.style.width = '100%';
+      card.innerHTML = `<div class="option-key">${escapeText(alt.id)}</div><div class="flex-1 text-sm">${escapeText(alt.texto)}</div>`;
+      card.onclick = () => selectAnswer(index, alt.id);
+      container.appendChild(card);
+    });
+  }
+
+  function updateTimer() {
+    const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    document.getElementById('timerSeconds').textContent = seconds;
+    document.getElementById('timerRingFg').style.strokeDashoffset = 327 * (1 - seconds / totalSeconds);
+    document.getElementById('timeoutFill').style.width = `${seconds / totalSeconds * 100}%`;
+    if (!seconds && !busy) {
+      busy = true;
+      request().then(applyState).catch(error => showToast('Conexión interrumpida', error.message, 'error')).finally(() => { busy = false; });
     }
+  }
+
+  async function selectAnswer(index, altId) {
+    if (busy || finished || index !== currentQ) return;
+    busy = true;
+    try {
+      applyState(await request('answer', {question_id: questions[index].id, answer: altId}));
+    } catch (error) {
+      showToast('No se guardó la respuesta', error.message, 'error');
+      try { applyState(await request()); } catch {}
+    } finally { busy = false; }
+  }
+
+  async function complete() {
+    if (finished) return;
+    try {
+      const res = await request('submit', {token, respuestas: {}, tiempo_transcurrido: 0});
+      finished = true;
+      if (timer) clearInterval(timer);
+      document.getElementById('timeoutBar').style.display = 'none';
+      showResults(res);
+    } catch (error) { showToast('No se pudo confirmar el resultado', error.message, 'error'); }
   }
 
   /* ── Show results ───────────────────────────────────────────────── */
@@ -667,8 +622,8 @@
     setState("stateCompleted");
     const pct = res.porcentaje_logro || 0;
     const correct = res.respuestas_correctas || 0;
-    const total   = answers.length;
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const total   = questions.length;
+    const elapsed = res.tiempo_transcurrido ?? Math.round((Date.now() - startTime) / 1000);
     const mins    = Math.floor(elapsed / 60);
     const secs    = elapsed % 60;
 

@@ -1,4 +1,5 @@
 from typing import List
+from sqlalchemy import or_
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
@@ -16,12 +17,16 @@ def get_user_asignaturas(
     """List all courses belonging to the authenticated teacher (RF-001)"""
     if current_user.rol == "admin":
         courses = db.query(models.Asignatura).all()
+    elif current_user.rol == "ayudante":
+        courses = db.query(models.Asignatura).join(models.CourseAssistant, models.CourseAssistant.asignatura_id == models.Asignatura.id).filter(models.CourseAssistant.usuario_id == current_user.id).all()
     else:
-        courses = db.query(models.Asignatura).filter(models.Asignatura.docente_id == current_user.id).all()
+        courses = db.query(models.Asignatura).filter(or_(models.Asignatura.docente_id == current_user.id, models.Asignatura.id.in_(db.query(models.CourseTeacher.asignatura_id).filter_by(usuario_id=current_user.id)))).all()
 
     result = []
     for c in courses:
-        total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == c.id).count()
+        if (c.parametros or {}).get("_archived"):
+            continue
+        total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == c.id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).count()
         result.append(
             schemas.AsignaturaOut(
                 id=c.id,
@@ -43,6 +48,8 @@ def create_asignatura(
     db: Session = Depends(get_db)
 ):
     """Create a new course (RF-001)"""
+    if current_user.rol != "admin":
+        raise HTTPException(403, "Solo el administrador puede crear asignaturas")
     default_params = {
         "prompt_custom": "",
         "nivel_rigor": "medium",
@@ -94,7 +101,7 @@ def get_asignatura(
 ):
     """Get single course details with RBAC check (RNF-006)"""
     course = check_course_access(asignatura_id, current_user, db)
-    total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == course.id).count()
+    total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == course.id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).count()
     return schemas.AsignaturaOut(
         id=course.id,
         nombre=course.nombre,
@@ -114,7 +121,9 @@ def update_asignatura(
     db: Session = Depends(get_db)
 ):
     """Update course and evaluation parameters (RF-003, RN-003)"""
-    course = check_course_access(asignatura_id, current_user, db)
+    course = check_course_access(asignatura_id, current_user, db, write=True)
+    if current_user.rol != "admin" and any(getattr(data, key) is not None for key in ("nombre", "periodo", "ano")):
+        raise HTTPException(403, "Solo el administrador puede editar los datos de la asignatura")
     datos_previos = {
         "nombre": course.nombre,
         "periodo": course.periodo,
@@ -146,7 +155,7 @@ def update_asignatura(
         datos_nuevos={"nombre": course.nombre, "parametros": course.parametros}
     )
 
-    total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == course.id).count()
+    total_std = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == course.id, ~models.Estudiante.id.in_(db.query(models.StudentStatus.estudiante_id).filter_by(active=False))).count()
     return schemas.AsignaturaOut(
         id=course.id,
         nombre=course.nombre,
