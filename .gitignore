@@ -46,3 +46,7 @@ node_modules/
 # Modern frontend dependency store and build cache
 .pnpm-store/
 *.tsbuildinfo
+# Miscelaneous
+docs/
+# Material no necesario para ejecutar el proyecto (entregables, generadores de documentos, respaldos y duplicados). Ver docs/context.md, sección 8.
+_archive/
