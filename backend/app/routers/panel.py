@@ -8,7 +8,7 @@ from backend.app.auth import get_current_user, check_course_access
 from backend.app.services.websocket_mgr import ws_manager
 from backend.app.audit import log_audit
 
-from backend.app.activities import parameters, work_for
+from backend.app.activities import parameters, work_for, assert_activity_open
 
 router = APIRouter(tags=["Panel Docente y Cierre"])
 
@@ -124,6 +124,7 @@ def get_teacher_panel(
                 justificacion_nota=flash_test.justificacion_nota if flash_test else "Criterio del docente",
                 nota_cerrada=is_cerrada,
                 flash_test_token=flash_test.token if flash_test else None,
+                flash_test_id=flash_test.id if flash_test else None,
                 flash_test_estado=flash_test.estado if flash_test else None
             )
         )
@@ -144,7 +145,7 @@ def get_teacher_panel(
     )
 
 @router.post("/api/asignaturas/{asignatura_id}/citas", response_model=schemas.CitaOut)
-def schedule_oral_defense(
+async def schedule_oral_defense(
     asignatura_id: int,
     data: schemas.CitaCreate,
     current_user: models.Usuario = Depends(get_current_user),
@@ -162,10 +163,21 @@ def schedule_oral_defense(
         raise HTTPException(status_code=404, detail="Estudiante no encontrado en esta asignatura")
 
     parameters(course, data.actividad_id, db)
+    assert_activity_open(asignatura_id, data.actividad_id, db)
+    from backend.app.services.scheduling import validate_slot
+    teacher_id = (data.docente_id or course.docente_id) if current_user.rol == 'admin' else current_user.id
+    if current_user.rol != 'admin' and data.docente_id is not None and data.docente_id != current_user.id:
+        raise HTTPException(403, 'No puedes agendar en nombre de otro docente')
+    target = db.get(models.Usuario, teacher_id)
+    account = db.get(models.AccountStatus, teacher_id)
+    if not target or (account and not account.active):
+        raise HTTPException(422, 'El docente no está activo')
+    check_course_access(asignatura_id, target, db)
+    validate_slot(db, teacher_id, student.id, data.fecha, data.bloque)
     cita = models.Cita(
         actividad_id=data.actividad_id,
         estudiante_id=student.id,
-        docente_id=current_user.id,
+        docente_id=teacher_id,
         fecha=data.fecha,
         bloque=data.bloque,
         acuerdos=data.acuerdos,
@@ -190,6 +202,8 @@ def schedule_oral_defense(
         }
     )
 
+    from backend.app.services.mail_outbox import appointment_notice
+    await appointment_notice(cita, db)
     return schemas.CitaOut(
         id=cita.id,
         actividad_id=cita.actividad_id,
@@ -224,6 +238,7 @@ def close_grade(
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")
 
     parameters(course, actividad_id, db)
+    assert_activity_open(asignatura_id, actividad_id, db)
     work = work_for(student.id, actividad_id, db)
     # Fetch latest FlashTest or create a closing record
     test = db.query(models.FlashTest).filter(models.FlashTest.estudiante_id == student.id, models.FlashTest.actividad_id == actividad_id).order_by(models.FlashTest.id.desc()).first()

@@ -8,6 +8,18 @@ from backend.app.services.mock_engine import generate_mock_evaluation, generate_
 
 logger = logging.getLogger(__name__)
 
+
+def mock_evaluation(**kwargs):
+    data, score, pct_ia = generate_mock_evaluation(**kwargs)
+    data['motor_analisis'] = 'mock'
+    data['fallback_ia'] = settings.LLM_PROVIDER != 'mock'
+    return data, score, pct_ia
+
+
+def mock_questions(*args, **kwargs):
+    return [{**q, '_motor':'mock'} for q in generate_mock_questions(*args, **kwargs)]
+
+
 async def evaluate_submission_llm(
     markdown_content: str,
     syllabus_content: str = "",
@@ -24,7 +36,7 @@ async def evaluate_submission_llm(
     """
     # If mock provider or no API credentials, run high-fidelity mock engine
     if settings.LLM_PROVIDER == "mock" or (settings.LLM_PROVIDER != "ollama" and not settings.LLM_API_KEY):
-        return generate_mock_evaluation(
+        return mock_evaluation(
             markdown_content=markdown_content,
             syllabus_content=syllabus_content,
             nivel_rigor=nivel_rigor,
@@ -81,18 +93,20 @@ async def evaluate_submission_llm(
     """
 
     try:
-        parsed = await request_json(system_prompt, user_prompt)
         from backend.app.schemas import AnexoAEvaluacionSchema
+        parsed = await request_json(system_prompt, user_prompt, AnexoAEvaluacionSchema.model_json_schema())
         parsed = AnexoAEvaluacionSchema.model_validate(parsed).model_dump()
         pct = percentage(parsed["porcentaje_logro"])
         pct_ia = percentage(parsed["deteccion_ia"]["porcentaje"])
         nota = round(4.0 + (pct - 60) * (3 / 40) if pct >= 60 else 1 + pct * .05, 1)
+        parsed['motor_analisis'] = settings.LLM_PROVIDER
+        parsed['fallback_ia'] = False
         return parsed, nota, pct_ia
     except Exception as e:
         logger.warning(f"Error o timeout llamando a LLM ({e}). Activando Mock Engine heurístico (RNF-007).")
 
     # Fallback to Mock Engine
-    return generate_mock_evaluation(
+    return mock_evaluation(
         markdown_content=markdown_content,
         syllabus_content=syllabus_content,
         nivel_rigor=nivel_rigor,
@@ -110,7 +124,7 @@ async def generate_question_pool_llm(
     Returns list of dicts with question text, options, and explanation.
     """
     if settings.LLM_PROVIDER == "mock" or (settings.LLM_PROVIDER != "ollama" and not settings.LLM_API_KEY):
-        return generate_mock_questions(markdown_content, syllabus_content, pool_size=pool_size)
+        return mock_questions(markdown_content, syllabus_content, pool_size=pool_size)
 
     try:
         from backend.app.schemas import PreguntaCreate
@@ -119,14 +133,17 @@ async def generate_question_pool_llm(
                   'con la clave preguntas, una lista de objetos con texto, alternativas '
                   '[{id: A, texto: ..., es_correcta: true}], justificacion_respuesta y seccion_origen. '
                   'Cada pregunta debe tener cuatro alternativas y exactamente una correcta.')
-        data = await request_json(system, f"Genera exactamente {pool_size} preguntas.\nContexto:\n{syllabus_content[:10000]}\nInforme:\n{markdown_content[:25000]}")
+        from pydantic import BaseModel, Field
+        class QuestionPool(BaseModel):
+            preguntas: list[PreguntaCreate] = Field(min_length=pool_size, max_length=pool_size)
+        data = await request_json(system, f"Genera exactamente {pool_size} preguntas.\nContexto:\n{syllabus_content[:10000]}\nInforme:\n{markdown_content[:25000]}", QuestionPool.model_json_schema())
         questions = [PreguntaCreate.model_validate(q).model_dump() for q in data["preguntas"]]
         if len(questions) != pool_size or len({q["texto"] for q in questions}) != pool_size:
             raise ValueError("Pool incompleto o duplicado")
-        return questions
+        return [{**q, '_motor':settings.LLM_PROVIDER} for q in questions]
     except Exception as exc:
         logger.warning("Generación LLM no disponible (%s); usando motor local", type(exc).__name__)
-        return generate_mock_questions(markdown_content, syllabus_content, pool_size=pool_size)
+        return mock_questions(markdown_content, syllabus_content, pool_size=pool_size)
 
 
 def percentage(value):
@@ -137,14 +154,14 @@ def percentage(value):
     return result
 
 
-async def request_json(system, prompt):
+async def request_json(system, prompt, schema=None):
     provider = settings.LLM_PROVIDER
     base = settings.LLM_BASE_URL.rstrip('/')
     headers = {}
     messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
     if provider == 'ollama':
         url = base + '/api/chat'
-        payload = {"model": settings.LLM_MODEL, "messages": messages, "stream": False, "format": "json"}
+        payload = {"model": settings.LLM_MODEL, "messages": messages, "stream": False, "format": schema or "json", "options": {"temperature": 0.2, "num_ctx": 8192}}
     elif provider == 'openai':
         if base == 'http://localhost:11434':
             base = 'https://api.openai.com/v1'

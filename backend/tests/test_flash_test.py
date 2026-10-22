@@ -116,7 +116,7 @@ def test_full_flash_test_and_cierre_flow(client, db_session, seeded_teacher):
     # 7. Oral Defense Citation (RF-013)
     cita_resp = client.post(f"/api/asignaturas/{course.id}/citas", json={
         "estudiante_id": student.id,
-        "fecha": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+        "fecha": (datetime.now(__import__("zoneinfo").ZoneInfo("America/Santiago")) + timedelta(days=2)).replace(hour=11,minute=0,second=0,microsecond=0).isoformat(),
         "bloque": "11:00 - 11:15",
         "acuerdos": "Defensa de prueba"
     }, headers=headers)

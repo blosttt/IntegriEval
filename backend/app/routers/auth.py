@@ -55,7 +55,8 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
             detail="Credenciales incorrectas (correo o contraseña)"
         )
 
-    token = create_access_token({"sub": str(user.id), "rol": user.rol, "email": user.correo})
+    version = db.get(models.CredentialVersion, user.id)
+    token = create_access_token({"sub": str(user.id), "rol": user.rol, "email": user.correo, "ver": version.version if version else 0})
     
     log_audit(
         db=db,

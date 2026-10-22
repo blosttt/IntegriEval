@@ -67,6 +67,9 @@ def edit_teacher(teacher_id: int, data: TeacherData, admin=Depends(require_admin
         raise HTTPException(422, "Para conservar los permisos de las asignaciones no se puede cambiar el rol de una cuenta existente")
     if data.contrasena:
         user.contrasena = hash_password(data.contrasena)
+        version = db.get(models.CredentialVersion,user.id)
+        if version: version.version += 1
+        else: db.add(models.CredentialVersion(usuario_id=user.id,version=1))
     status = db.get(models.AccountStatus, user.id)
     if status:
         status.active = data.active

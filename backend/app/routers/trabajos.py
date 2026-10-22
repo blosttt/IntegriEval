@@ -11,7 +11,7 @@ from backend.app.services.pdf_service import extract_pdf_to_markdown, match_stud
 from backend.app.services.llm_service import evaluate_submission_llm, generate_question_pool_llm
 from backend.app.audit import log_audit
 
-from backend.app.activities import parameters, work_for
+from backend.app.activities import parameters, work_for, assert_activity_open
 
 router = APIRouter(tags=["Trabajos y Evaluación"])
 
@@ -27,6 +27,7 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
         return
 
     course = db.query(models.Asignatura).filter(models.Asignatura.id == asignatura_id).first()
+    assert_activity_open(asignatura_id, trabajo.actividad_id, db)
     course_params = parameters(course, trabajo.actividad_id, db)
     
     # 1. Semantic PDF extraction
@@ -39,7 +40,7 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
     except Exception as e:
         trabajo.estado = "error"
         db.commit()
-        raise HTTPException(422, "No se pudo extraer el PDF")
+        raise HTTPException(422, str(e) if isinstance(e,ValueError) and 'OCR' in str(e) else "No se pudo extraer el PDF")
 
     if not (trabajo.markdown or "").strip():
         trabajo.estado = "error"
@@ -94,6 +95,7 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
         pool_size=pool_size
     )
 
+    evaluacion.desglose = {**evaluacion.desglose, 'motor_preguntas': 'mock' if any(q.get('_motor') == 'mock' for q in questions_data) else settings.LLM_PROVIDER}
     for idx, q_dict in enumerate(questions_data):
         is_sel = idx < num_selected
         pregunta = models.Pregunta(
@@ -137,6 +139,7 @@ async def upload_trabajo_single(
     check_course_access(asignatura_id, current_user, db, write=True)
 
     parameters(db.get(models.Asignatura, asignatura_id), actividad_id, db)
+    assert_activity_open(asignatura_id, actividad_id, db)
     student = db.query(models.Estudiante).filter(
         models.Estudiante.id == estudiante_id,
         models.Estudiante.asignatura_id == asignatura_id
@@ -196,6 +199,7 @@ async def upload_trabajos_batch(
     check_course_access(asignatura_id, current_user, db, write=True)
 
     parameters(db.get(models.Asignatura, asignatura_id), actividad_id, db)
+    assert_activity_open(asignatura_id, actividad_id, db)
     students = db.query(models.Estudiante).filter(models.Estudiante.asignatura_id == asignatura_id).all()
     student_lookup = [
         {"id": s.id, "nombre": s.nombre, "correo": s.correo, "rut": s.rut}

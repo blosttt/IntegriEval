@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.app import models, schemas
 from backend.app.auth import get_current_user, check_course_access
 from backend.app.database import get_db
-from backend.app.activities import parameters
+from backend.app.activities import parameters, assert_activity_open
 from backend.app.audit import log_audit
 
 router = APIRouter(tags=["Evaluaciones de asignatura"])
@@ -16,7 +16,12 @@ class ActivityData(BaseModel):
 @router.get('/api/asignaturas/{course_id}/actividades')
 def list_activities(course_id: int, user=Depends(get_current_user), db: Session=Depends(get_db)):
     course = check_course_access(course_id, user, db)
-    return [{"id":0,"asignatura_id":course.id,"titulo":(course.parametros or {}).get("titulo_evaluacion", "Evaluación de informes"),"parametros":course.parametros}] + [{"id":a.id,"asignatura_id":course.id,"titulo":a.titulo,"parametros":a.parametros} for a in db.query(models.Actividad).filter_by(asignatura_id=course.id).order_by(models.Actividad.id).all()]
+    result = [{"id":0,"asignatura_id":course.id,"titulo":(course.parametros or {}).get("titulo_evaluacion", "Evaluación de informes"),"parametros":course.parametros}] + [{"id":a.id,"asignatura_id":course.id,"titulo":a.titulo,"parametros":a.parametros} for a in db.query(models.Actividad).filter_by(asignatura_id=course.id).order_by(models.Actividad.id).all()]
+
+    for item in result:
+        state=db.get(models.ActivityStatus,(course.id,item['id']))
+        item['estado']=state.estado if state else 'abierta'
+    return result
 
 @router.post('/api/asignaturas/{course_id}/actividades')
 def create_activity(course_id: int, data: ActivityData, user=Depends(get_current_user), db: Session=Depends(get_db)):
@@ -30,6 +35,7 @@ def create_activity(course_id: int, data: ActivityData, user=Depends(get_current
 def update_activity(course_id: int, activity_id: int, data: ActivityData, user=Depends(get_current_user), db: Session=Depends(get_db)):
     course=check_course_access(course_id,user,db,write=True)
     parameters(course, activity_id or None, db)
+    assert_activity_open(course_id, activity_id or None, db)
     if activity_id:
         activity=db.get(models.Actividad,activity_id)
         activity.titulo=data.titulo; activity.parametros=data.parametros.model_dump()

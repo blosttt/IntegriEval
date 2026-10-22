@@ -38,3 +38,7 @@ El inicio `/` incluye el formulario de acceso con entradas de Docente, Ayudante 
 - La guía integrada destaca elementos reales y muestra explicaciones junto al control. Cambia de sección y desplaza la página siguiendo el flujo; los elementos destacados siguen siendo interactivos. Se puede avanzar, volver o salir sin modificar datos automáticamente.
 
 Estas reglas reemplazan la restricción anterior de ayudante de solo consulta para toda la aplicación: ahora únicamente la gestión de alumnos es de solo lectura para ayudantes.
+
+## Funciones operativas
+
+Incluye recuperación de contraseña, historial de correos, avisos de citas, validación de agenda, cierre/archivo de evaluaciones, exportación CSV/PDF y cola persistente de PDF con reintentos. Ver [avance y configuración pendiente](../docs/AVANCE_FUNCIONALIDADES.md). SMTP e IA reales requieren configuración del servidor.

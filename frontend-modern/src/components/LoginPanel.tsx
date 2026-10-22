@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {LogIn,GraduationCap,Users,ShieldCheck} from 'lucide-react';
@@ -21,6 +22,6 @@ export default function LoginPanel(){
       <label>Contraseña<input name="password" type="password" autoComplete="current-password" placeholder="Tu contraseña" required/></label>
       {error&&<p className="ie-error" role="alert">{error}</p>}
       <button className="ie-button ie-primary" disabled={busy}>{busy?'Ingresando…':`Ingresar como ${role==='admin'?'super administrador':role==='assistant'?'ayudante':'docente'}`}<LogIn size={16}/></button>
-    </form><p className="ie-login-note">El perfil y los permisos se validan con tu cuenta. Los estudiantes acceden por el enlace personal enviado a su correo.</p></div>
+    </form><Link className="ie-button" href="/recuperar">Olvidé mi contraseña</Link><p className="ie-login-note">El perfil y los permisos se validan con tu cuenta. Los estudiantes acceden por el enlace personal enviado a su correo.</p></div>
   </section>;
 }

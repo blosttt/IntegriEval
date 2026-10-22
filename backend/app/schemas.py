@@ -294,6 +294,7 @@ class PanelEstudianteFila(BaseModel):
     justificacion_nota: Optional[str] = None
     nota_cerrada: bool = False
     flash_test_token: Optional[str] = None
+    flash_test_id: Optional[int] = None
     flash_test_estado: Optional[str] = None
 
 class PanelResultadosOut(BaseModel):
@@ -312,6 +313,7 @@ class PanelResultadosOut(BaseModel):
 
 class CitaCreate(BaseModel):
     estudiante_id: int
+    docente_id: Optional[int] = None
     actividad_id: Optional[int] = None
     fecha: datetime
     bloque: str  # ej: "09:30 - 09:45"

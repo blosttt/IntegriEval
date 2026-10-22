@@ -26,31 +26,26 @@ def extract_pdf_to_markdown(pdf_path: str) -> str:
         except Exception:
             pass  # Fall back to standard PyMuPDF layout parsing
 
-    # Robust fallback layout parser using PyMuPDF (fitz)
-    doc = fitz.open(pdf_path)
+    from backend.app.config import settings
     md_lines = []
-    
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        md_lines.append(f"\n\n<!-- Página {page_num + 1} -->\n")
-        
-        # Extract structured text blocks
-        blocks = page.get_text("blocks")
-        for b in blocks:
-            # block tuple: (x0, y0, x1, y1, text, block_no, block_type)
-            if b[6] == 0:  # Text block
-                text = b[4].strip()
-                if not text:
-                    continue
-                # Heuristic heading detection based on block length and casing
-                if len(text.splitlines()) == 1 and len(text) < 80:
-                    if text.isupper() or re.match(r"^(Cap[íi]tulo|\d+(\.\d+)*|[A-Z][a-z]+(\s+[A-Z][a-z]+)*:)", text):
-                        md_lines.append(f"\n### {text}\n")
-                        continue
-                md_lines.append(f"{text}\n")
-                
-    doc.close()
-    return "\n".join(md_lines)
+    with fitz.open(pdf_path) as doc:
+        for page_num, page in enumerate(doc):
+            text = page.get_text().strip()
+            if not text:
+                if not page.get_images() and not page.get_drawings():
+                    continue  # Ignore genuinely blank cover/trailing pages.
+                if not settings.OCR_ENABLED:
+                    raise ValueError('PDF escaneado: habilita OCR y configura los datos de idioma para extraer su texto')
+                try:
+                    text_page = page.get_textpage_ocr(language=settings.OCR_LANGUAGE, dpi=150, full=True, tessdata=settings.TESSDATA_PREFIX or None)
+                    text = page.get_text(textpage=text_page).strip()
+                except Exception as exc:
+                    raise ValueError('OCR no disponible: revisa TESSDATA_PREFIX y los idiomas instalados') from exc
+            if text:
+                md_lines.append(f'\n\n<!-- Página {page_num + 1} -->\n{text}\n')
+    if not md_lines:
+        raise ValueError('El documento no contiene texto extraíble; revisa el contenido y la configuración OCR')
+    return '\n'.join(md_lines)
 
 def match_student_filename(filename: str, student_names_emails: list[dict]) -> Optional[int]:
     """

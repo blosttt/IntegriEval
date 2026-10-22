@@ -138,6 +138,8 @@ def update_asignatura(
     if data.ano is not None:
         course.ano = data.ano
     if data.parametros is not None:
+        from backend.app.activities import assert_activity_open
+        assert_activity_open(asignatura_id, None, db)
         current_p = dict(course.parametros or {})
         current_p.update(data.parametros.model_dump())
         course.parametros = current_p

@@ -29,7 +29,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Generate JWT token (RNF-004)"""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc), "ver": data.get("ver", 0)})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -54,6 +54,9 @@ def get_current_user(
 
     user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
     if user is None:
+        raise credentials_exception
+    version = db.get(models.CredentialVersion, user.id)
+    if payload.get("ver", 0) != (version.version if version else 0):
         raise credentials_exception
     account = db.get(models.AccountStatus, user.id)
     if account and not account.active:

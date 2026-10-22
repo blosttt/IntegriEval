@@ -32,7 +32,7 @@ def test_multiple_evaluations_keep_work_tests_and_results_separate(client, db_se
     assert first.status_code==second.status_code==200
     assert first.json()['items'][0]['token']!=second.json()['items'][0]['token']
     assert db_session.query(m.Cita).count()==0  # No automatic scheduling.
-    when=(datetime.now(timezone.utc)+timedelta(days=5)).replace(hour=10,minute=0,second=0,microsecond=0)
+    when=(datetime.now(__import__("zoneinfo").ZoneInfo("America/Santiago"))+timedelta(days=5)).replace(hour=10,minute=0,second=0,microsecond=0)
     appointment=client.post(root+'/citas',headers=headers,json={'estudiante_id':student.id,'actividad_id':aid,'fecha':when.isoformat(),'bloque':'10:00 - 10:30'})
     assert appointment.status_code==200,appointment.text
     assert appointment.json()['actividad_id']==aid

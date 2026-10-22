@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "integrieval@gmail.com"
     SMTP_ENABLED: bool = False
+    PUBLIC_APP_URL: str = "http://127.0.0.1:3000"
+    APP_TIMEZONE: str = "America/Santiago"
+    OCR_ENABLED: bool = False
+    OCR_LANGUAGE: str = "spa+eng"
+    TESSDATA_PREFIX: str = ""
     
     # LLM Settings (RI-001, RF-014, RNF-007)
     LLM_PROVIDER: str = "mock"  # mock, ollama, openai, anthropic

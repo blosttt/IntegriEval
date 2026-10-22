@@ -19,3 +19,9 @@ def work_for(student_id, activity_id, db):
 def test_evaluation(test, db):
     work = work_for(test.estudiante_id, test.actividad_id, db)
     return work.evaluacion if work else None
+
+
+def assert_activity_open(course_id, activity_id, db):
+    status = db.get(models.ActivityStatus, (course_id, activity_id or 0))
+    if status and status.estado != "abierta":
+        raise HTTPException(409, "La evaluación está cerrada o archivada. Reábrela antes de modificarla.")

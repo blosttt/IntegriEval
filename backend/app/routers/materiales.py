@@ -60,7 +60,7 @@ async def upload_material(
             markdown_content = extract_pdf_to_markdown(str(saved_path))
         except Exception as e:
             saved_path.unlink(missing_ok=True)
-            raise HTTPException(422, "No se pudo extraer el PDF") from e
+            raise HTTPException(422, str(e) if isinstance(e,ValueError) and 'OCR' in str(e) else "No se pudo extraer el PDF") from e
     else:
         with open(saved_path, "r", encoding="utf-8", errors="replace") as f:
             markdown_content = f.read()

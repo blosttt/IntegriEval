@@ -19,6 +19,13 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@pytest.fixture(autouse=True)
+def isolate_external_integrations(monkeypatch):
+    """Unit tests never send email or invoke the user's real model by default."""
+    from backend.app.config import settings
+    monkeypatch.setattr(settings, 'LLM_PROVIDER', 'mock')
+    monkeypatch.setattr(settings, 'SMTP_ENABLED', False)
+
 @pytest.fixture(scope="function")
 def db_session():
     Base.metadata.create_all(bind=engine)

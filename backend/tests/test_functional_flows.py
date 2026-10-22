@@ -119,7 +119,7 @@ def test_grade_remains_percentage(client, prepared, value):
 def test_citation_lifecycle(client, prepared):
     teacher, course, student, _ = prepared
     path = f'/api/asignaturas/{course.id}/citas'
-    response = client.post(path, headers=headers(teacher), json={"estudiante_id": student.id, "fecha": "2026-11-20T12:00:00Z", "bloque": "10:00 - 10:15"})
+    response = client.post(path, headers=headers(teacher), json={"estudiante_id": student.id, "fecha": "2030-11-20T13:00:00Z", "bloque": "10:00 - 10:15"})
     assert response.status_code == 200
     identifier = response.json()['id']
     assert client.put(f'{path}/{identifier}', headers=headers(teacher), json={"estado": "realizada", "acuerdos": "Defendió la metodología"}).json()['estado'] == 'realizada'

@@ -100,5 +100,7 @@ def select_questions_for_test(
 
 
 def assert_editable(evaluacion, db):
+    from backend.app.activities import assert_activity_open
+    assert_activity_open(evaluacion.trabajo.estudiante.asignatura_id, evaluacion.trabajo.actividad_id, db)
     if db.query(models.FlashTest).filter_by(estudiante_id=evaluacion.trabajo.estudiante_id, actividad_id=evaluacion.trabajo.actividad_id).first():
         raise HTTPException(409, "El test ya fue despachado; sus preguntas no pueden modificarse")

@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import TeacherTutorial from "@/components/TeacherTutorial";
+import UploadQueue from "@/components/UploadQueue";
+import EvaluationOperations from "@/components/EvaluationOperations";
 import AppointmentForm from "@/components/AppointmentForm";
 import StudentEditor from "@/components/StudentEditor";
 import AdminTeacherContext from "@/components/AdminTeacherContext";
@@ -371,7 +373,7 @@ export default function TeacherDashboard() {
 
     try {
       await api.bulkUploadReports(selectedEvalId, studentIds, bulkFiles);
-      setSuccess("¡Trabajos subidos! Los informes fueron extraídos y analizados.");
+      setSuccess("Archivos en cola. Puedes seguir el avance y reintentar errores individualmente.");
       setBulkFiles([]);
       setBulkMapping({});
       await loadEvalSubData(selectedEvalId);
@@ -617,7 +619,7 @@ export default function TeacherDashboard() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="ie-course-controls flex flex-wrap items-center gap-3">
             {/* Course Selector */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-zinc-400">Curso:</span>
@@ -656,6 +658,7 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
+        {selectedCourseId&&selectedEval&&<EvaluationOperations courseId={selectedCourseId} evaluation={selectedEval} onChanged={async()=>{const evs=await api.getCourseEvaluations(selectedCourseId);setCourseEvals(evs);setSelectedEval(evs.find((ev:any)=>ev.id===selectedEvalId)||null);}}/>}
         {/* Global Notifications */}
         {error && (
           <div className="flex items-center justify-between rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-xs text-red-400">
@@ -1161,6 +1164,7 @@ export default function TeacherDashboard() {
               )}
             </div>
 
+            {selectedCourseId&&selectedEvalId&&<UploadQueue courseId={selectedCourseId} evaluationId={selectedEvalId} onCompleted={()=>loadEvalSubData(selectedEvalId)}/>}
             {/* Reports Table & Analysis Status */}
             <details key={selectedEvalId} className="glass-panel p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 space-y-4">
                 <summary className="text-sm font-bold text-white uppercase tracking-wider cursor-pointer">
@@ -1209,7 +1213,7 @@ export default function TeacherDashboard() {
                               <div className="font-bold text-white">{r.student_name}</div>
                               <div className="text-[10px] text-zinc-500">{r.student_email}</div>
                             </td>
-                            <td className="py-3">{statusBadge}</td>
+                            <td className="py-3">{statusBadge}<p className="text-xs text-zinc-400">{r.analysis_engine}{r.analysis_fallback?' · respaldo simulado':''}</p></td>
                             <td className="py-3 font-semibold text-white">
                               {scorePct != null ? `${scorePct}%` : "--"}
                             </td>

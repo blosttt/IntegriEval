@@ -15,6 +15,10 @@ if (!(Test-Path -LiteralPath $nextCli)) {
     throw 'Faltan dependencias del frontend: ejecuta pnpm install dentro de frontend-modern.'
 }
 $env:NEXT_TELEMETRY_DISABLED = '1'
+$environmentFile = Join-Path $projectDir '.env'
+if ((Test-Path -LiteralPath $environmentFile) -and (Get-Content -LiteralPath $environmentFile | Select-String -Pattern '^LLM_PROVIDER\s*=\s*ollama\s*$')) {
+    & (Join-Path $projectDir 'start-ollama.ps1')
+}
 $backendProcess = $null
 try {
     $backendRunning = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue

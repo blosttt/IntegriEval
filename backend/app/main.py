@@ -105,9 +105,19 @@ async def lifespan(app: FastAPI):
     from contextlib import suppress
     from backend.app.routers.flash_test import sweep_active_tests
     timer_task = asyncio.create_task(sweep_active_tests(SessionLocal))
+    from backend.app.services.mail_outbox import reminder_loop
+    reminder_task = asyncio.create_task(reminder_loop(SessionLocal))
+    from backend.app.services.upload_worker import upload_loop
+    upload_task = asyncio.create_task(upload_loop(SessionLocal))
     try:
         yield
     finally:
+        upload_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await upload_task
+        reminder_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await reminder_task
         timer_task.cancel()
         with suppress(asyncio.CancelledError):
             await timer_task
@@ -142,6 +152,11 @@ app.include_router(gestion.router)
 app.include_router(admin.router)
 from backend.app.routers import actividades
 app.include_router(actividades.router)
+from backend.app.routers import recovery, operations
+app.include_router(recovery.router)
+app.include_router(operations.router)
+from backend.app.routers import upload_queue
+app.include_router(upload_queue.router)
 
 # Mount Static Files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"

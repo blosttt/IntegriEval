@@ -93,11 +93,16 @@ def list_appointments(course_id: int, user=Depends(get_current_user), db: Sessio
 
 
 @router.put("/api/asignaturas/{course_id}/citas/{appointment_id}", response_model=schemas.CitaOut)
-def update_appointment(course_id: int, appointment_id: int, data: schemas.CitaUpdate, user=Depends(get_current_user), db: Session = Depends(get_db)):
+async def update_appointment(course_id: int, appointment_id: int, data: schemas.CitaUpdate, user=Depends(get_current_user), db: Session = Depends(get_db)):
     check_course_access(course_id, user, db, write=True)
     appointment = db.query(models.Cita).join(models.Estudiante).filter(models.Cita.id == appointment_id, models.Estudiante.asignatura_id == course_id).first()
     if not appointment:
         raise HTTPException(404, "Cita no encontrada")
+    from backend.app.activities import assert_activity_open
+    assert_activity_open(course_id, appointment.actividad_id, db)
+    from backend.app.services.scheduling import validate_slot
+    if (data.fecha is not None or data.bloque is not None or data.estado == 'programada') and (data.estado or appointment.estado) == 'programada':
+        validate_slot(db, appointment.docente_id, appointment.estudiante_id, data.fecha or appointment.fecha, data.bloque or appointment.bloque, appointment.id)
     before = {"estado": appointment.estado, "fecha": str(appointment.fecha), "bloque": appointment.bloque, "acuerdos": appointment.acuerdos}
     values = data.model_dump(exclude_unset=True)
     if any(value is None for key, value in values.items() if key != "acuerdos"):
@@ -106,6 +111,9 @@ def update_appointment(course_id: int, appointment_id: int, data: schemas.CitaUp
         setattr(appointment, key, value)
     db.commit()
     log_audit(db, "ACTUALIZAR_DEFENSA_ORAL", "citas", appointment.id, user.id, before, data.model_dump(mode="json", exclude_unset=True))
+    from backend.app.services.mail_outbox import appointment_notice
+    if data.fecha is not None or data.bloque is not None or data.estado is not None:
+        await appointment_notice(appointment,db)
     return appointment
 
 

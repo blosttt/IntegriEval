@@ -11,7 +11,7 @@ from backend.app.services.email_service import send_flash_test_email
 from backend.app.services.websocket_mgr import ws_manager
 from backend.app.audit import log_audit
 
-from backend.app.activities import parameters, work_for, test_evaluation
+from backend.app.activities import parameters, work_for, test_evaluation, assert_activity_open
 
 router = APIRouter(tags=["Flash Test en Tiempo Real"])
 
@@ -42,6 +42,7 @@ async def dispatch_flash_tests(
             raise HTTPException(422, "Seleccione estudiantes de esta asignatura")
         students = [s for s in students if s.id in estudiante_ids]
     
+    assert_activity_open(asignatura_id, actividad_id, db)
     course_params = parameters(course, actividad_id, db)
     tiempo_segundos = int(course_params.get("tiempo_test_segundos", 60))
     base_url = str(request.base_url).rstrip("/")
@@ -85,7 +86,7 @@ async def dispatch_flash_tests(
 
         get_state(flash_test, db)
         db.commit()
-        test_link = f"{base_url}/test/{token}"
+        test_link = f"{settings.PUBLIC_APP_URL.rstrip(chr(47))}/flash/{token}"
         email_sent = await send_flash_test_email(
             student_name=s.nombre,
             student_email=s.correo,
@@ -94,6 +95,8 @@ async def dispatch_flash_tests(
             seconds_per_question=flash_test.tiempo_limite_segundos
         )
 
+        db.add(models.MailDelivery(asignatura_id=asignatura_id, estudiante_id=s.id, purpose='flash', reference_id=flash_test.id, recipient=s.correo, subject=f'IntegryEval · Flash Test · {course.nombre}', body=f'Hola {s.nombre}, abre tu Flash Test: {test_link}\nVigencia: {flash_test.vigencia}.', status='sent' if email_sent else ('disabled' if not settings.SMTP_ENABLED else 'failed'), attempts=1, error=None if email_sent else 'Correo no enviado; revisa la configuración SMTP', sent_at=datetime.now(timezone.utc) if email_sent else None))
+        db.commit()
         dispatched_items.append(
             schemas.FlashTestDispatchItem(
                 estudiante_id=s.id,

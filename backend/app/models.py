@@ -4,6 +4,20 @@ from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, JSON, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
+
+
+class UTCDateTime(TypeDecorator):
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        return value.replace(tzinfo=timezone.utc) if value is not None else None
 from backend.app.database import Base
 
 def utc_now():
@@ -153,7 +167,7 @@ class Cita(Base):
     estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
     actividad_id = Column(Integer, ForeignKey("actividades.id"), nullable=True)
     docente_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
-    fecha = Column(DateTime, nullable=False)
+    fecha = Column(UTCDateTime, nullable=False)
     bloque = Column(String(50), nullable=False)  # ej: "10:00 - 10:15"
     estado = Column(String(50), default="programada")  # programada, realizada, ausente, cancelada
     acuerdos = Column(Text, nullable=True)
@@ -225,3 +239,65 @@ class Actividad(Base):
     asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), nullable=False)
     titulo = Column(String(150), nullable=False)
     parametros = Column(JSON, nullable=False, default=dict)
+
+
+class ActivityStatus(Base):
+    __tablename__ = "activity_status"
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), primary_key=True)
+    actividad_key = Column(Integer, primary_key=True)  # 0 = evaluación original
+    estado = Column(String(20), nullable=False, default="abierta")
+
+
+class MailDelivery(Base):
+    __tablename__ = "mail_deliveries"
+    id = Column(Integer, primary_key=True)
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), nullable=True)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=True)
+    purpose = Column(String(30), nullable=False)
+    reference_id = Column(Integer, nullable=True)
+    recipient = Column(String(200), nullable=False)
+    subject = Column(String(250), nullable=False)
+    body = Column(Text, nullable=False)
+    status = Column(String(20), default="pending", nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    error = Column(String(300), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    sent_at = Column(DateTime, nullable=True)
+
+
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    token_hash = Column(String(64), primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    created_at = Column(DateTime, default=utc_now)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, nullable=False, default=False)
+
+
+class CredentialVersion(Base):
+    __tablename__ = "credential_versions"
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+    version = Column(Integer, nullable=False, default=0)
+
+
+class ReminderClaim(Base):
+    __tablename__ = "reminder_claims"
+    cita_id = Column(Integer, ForeignKey("citas.id"), primary_key=True)
+    fecha_cita = Column(UTCDateTime, primary_key=True)
+
+
+class UploadJob(Base):
+    __tablename__ = "upload_jobs"
+    id = Column(Integer, primary_key=True)
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), nullable=False)
+    actividad_id = Column(Integer, ForeignKey("actividades.id"), nullable=True)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    filename = Column(String(250), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    error = Column(String(500), nullable=True)
+    created_at = Column(UTCDateTime, default=utc_now)
+    started_at = Column(UTCDateTime, nullable=True)
+    finished_at = Column(UTCDateTime, nullable=True)
