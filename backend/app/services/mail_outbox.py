@@ -6,24 +6,31 @@ from backend.app import models
 from backend.app.config import settings
 
 
-async def deliver(record, db):
+async def deliver(record, db, force=False, config=None):
+    from backend.app.services.smtp_configuration import snapshot
+    from backend.app.services.smtp_transport import send_message, is_demo_recipient
     if record.status == 'sent':
         return record
+    current=config or snapshot()
     record.attempts += 1
-    if not settings.SMTP_ENABLED or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    if is_demo_recipient(record.recipient):
+        record.status, record.error = 'disabled', 'Dirección de demostración: no se envían correos'
+    elif (not force and not current['SMTP_ENABLED']) or not current['SMTP_USER'] or not current['SMTP_PASSWORD']:
         record.status, record.error = 'disabled', 'SMTP no configurado o desactivado'
     else:
         message = EmailMessage()
-        message['From'] = settings.SMTP_FROM or settings.SMTP_USER
-        message['To'], message['Subject'] = record.recipient, record.subject
+        message['From'] = current['SMTP_FROM'] or current['SMTP_USER']
+        message['To'], message['Subject'] = record.recipient, record.subject.replace('\r',' ').replace('\n',' ')
         message.set_content(record.body)
         try:
-            await aiosmtplib.send(message, hostname=settings.SMTP_HOST, port=settings.SMTP_PORT,
-                                 start_tls=True, username=settings.SMTP_USER, password=settings.SMTP_PASSWORD, timeout=10)
+            rejected,_ = await send_message(message,current)
+            if rejected:raise ValueError('El destinatario fue rechazado')
             record.status, record.error = 'sent', None
             record.sent_at = datetime.now(timezone.utc)
+        except aiosmtplib.errors.SMTPAuthenticationError:
+            record.status, record.error = 'failed', 'Gmail rechazó la autenticación. Revisa la cuenta, la contraseña de aplicación y las políticas de Google Workspace.'
         except Exception:
-            record.status, record.error = 'failed', 'El servidor SMTP rechazó el envío o no respondió'
+            record.status, record.error = 'failed', 'El servidor SMTP rechazó el envío o no respondió. Revisa la conexión y la configuración.'
     db.commit()
     return record
 

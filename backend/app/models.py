@@ -301,3 +301,11 @@ class UploadJob(Base):
     created_at = Column(UTCDateTime, default=utc_now)
     started_at = Column(UTCDateTime, nullable=True)
     finished_at = Column(UTCDateTime, nullable=True)
+
+
+class SmtpVerification(Base):
+    __tablename__ = "smtp_verification"
+    id = Column(Integer, primary_key=True)
+    config_hash = Column(String(64), nullable=False)
+    recipient = Column(String(200), nullable=False)
+    verified_at = Column(UTCDateTime, default=utc_now)

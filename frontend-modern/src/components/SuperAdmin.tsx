@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation';
 import Link from 'next/link';
 import {Search,Plus,ArrowRight,Pencil,ShieldCheck,GraduationCap,Users} from 'lucide-react';
 import IntegrationStatus from './IntegrationStatus';
+import GmailSettings from './GmailSettings';
 import Navbar from './Navbar';
 import Dialog from './Dialog';
 import {api,request} from '@/lib/api';
@@ -20,7 +21,7 @@ export default function SuperAdmin(){
   return <div className="ie-shell"><Navbar/><main className="ie-workspace ie-directory">
     <header className="ie-page-heading"><div><span className="ie-eyebrow"><ShieldCheck size={16}/>Super admin</span><h1>Selecciona un docente</h1><p>Abre su espacio de trabajo para revisar y administrar sus cursos con tus permisos de superadministrador.</p></div><button className="ie-button ie-primary" onClick={()=>{setEditor({});setError('');}}><Plus size={16}/>Agregar docente</button></header>
     {!ready?<p className="ie-empty">Verificando acceso…</p>:<>
-      <IntegrationStatus/><label className="ie-directory-search"><Search size={18}/><input aria-label="Buscar profesor o ayudante" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar por nombre o correo"/><span>{visible.length} docentes</span></label>
+      <div className="ie-actions" style={{flexWrap:'wrap'}}><IntegrationStatus/><GmailSettings/></div><label className="ie-directory-search"><Search size={18}/><input aria-label="Buscar profesor o ayudante" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar por nombre o correo"/><span>{visible.length} docentes</span></label>
       {error&&!editor&&<p role="alert" className="ie-error">{error}</p>}
       <div className="ie-person-grid">{visible.map(person=><article className="ie-person-card" key={person.id}>
         <div className="ie-person-top"><span className="ie-person-avatar">{person.rol==='ayudante'?<Users size={24}/>:<GraduationCap size={24}/>}</span><span className={`ie-badge ${person.active?'teacher':'inactive'}`}>{person.active?'Activo':'Desactivado'}</span></div>

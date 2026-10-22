@@ -3,6 +3,7 @@
 venv/
 ENV/
 .env
+.smtp-*.tmp
 
 # Python
 __pycache__/

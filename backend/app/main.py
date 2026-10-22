@@ -157,6 +157,8 @@ app.include_router(recovery.router)
 app.include_router(operations.router)
 from backend.app.routers import upload_queue
 app.include_router(upload_queue.router)
+from backend.app.routers import smtp_admin
+app.include_router(smtp_admin.router)
 
 # Mount Static Files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"

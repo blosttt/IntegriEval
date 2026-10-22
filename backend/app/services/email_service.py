@@ -1,4 +1,5 @@
 import logging
+from html import escape
 from email.message import EmailMessage
 import aiosmtplib
 from backend.app.config import settings
@@ -17,7 +18,7 @@ async def send_flash_test_email(
     Sends Flash Test invitation email via Gmail SMTP TLS (RF-010, RI-002).
     If SMTP credentials are not configured, logs link and simulates successful dispatch.
     """
-    subject = f"IntegriEval — Verificación Oral Flash: {course_name}"
+    subject = f"IntegriEval — Verificación Oral Flash: {course_name}".replace("\r", " ").replace("\n", " ")
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -39,8 +40,8 @@ async def send_flash_test_email(
           <span class="badge">IntegriEval • Evaluación Auténtica</span>
           <h2 style="margin: 8px 0 0 0; color: #0f172a;">Verificación Flash de Integridad</h2>
         </div>
-        <p>Estimado/a <strong>{student_name}</strong>,</p>
-        <p>Como parte del proceso de evaluación de su entrega en la asignatura <strong>{course_name}</strong>, debe completar una breve verificación oral/flash interactiva.</p>
+        <p>Estimado/a <strong>{escape(student_name)}</strong>,</p>
+        <p>Como parte del proceso de evaluación de su entrega en la asignatura <strong>{escape(course_name)}</strong>, debe completar una breve verificación oral/flash interactiva.</p>
         
         <div class="alert">
           <strong>Reglas del Test:</strong>
@@ -52,12 +53,12 @@ async def send_flash_test_email(
         </div>
 
         <p style="text-align: center;">
-          <a href="{test_link}" class="btn" target="_blank">Iniciar Flash Test Ahora</a>
+          <a href="{escape(test_link)}" class="btn" target="_blank">Iniciar Flash Test Ahora</a>
         </p>
 
         <p style="font-size: 13px; color: #475569;">
           Si el botón no funciona, copie y pegue el siguiente enlace en su navegador:<br>
-          <a href="{test_link}" style="color: #2563eb; word-break: break-all;">{test_link}</a>
+          <a href="{escape(test_link)}" style="color: #2563eb; word-break: break-all;">{escape(test_link)}</a>
         </p>
 
         <div class="footer">
@@ -68,12 +69,15 @@ async def send_flash_test_email(
     </html>
     """
 
-    if not settings.SMTP_ENABLED or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.info(f"[SIMULADOR SMTP] Despacho Flash Test a {student_email}: {test_link}")
+    from backend.app.services.smtp_configuration import snapshot
+    from backend.app.services.smtp_transport import send_message, is_demo_recipient
+    current=snapshot()
+    if is_demo_recipient(student_email) or not current['SMTP_ENABLED'] or not current['SMTP_USER'] or not current['SMTP_PASSWORD']:
+        logger.info("Correo Flash no enviado: SMTP desactivado o destinatario de demostración")
         return False
 
     message = EmailMessage()
-    message["From"] = settings.SMTP_FROM or settings.SMTP_USER
+    message["From"] = current['SMTP_FROM'] or current['SMTP_USER']
     message["To"] = student_email
     message["Subject"] = subject
     message.set_content(
@@ -82,16 +86,9 @@ async def send_flash_test_email(
     message.add_alternative(html_content, subtype="html")
 
     try:
-        await aiosmtplib.send(
-            message,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            start_tls=True,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            timeout=10.0
-        )
+        rejected,_ = await send_message(message,current)
+        if rejected:return False
         return True
     except Exception as e:
-        logger.error(f"Error enviando correo a {student_email} vía SMTP: {e}")
+        logger.error("No se pudo enviar el correo Flash (%s)",type(e).__name__)
         return False

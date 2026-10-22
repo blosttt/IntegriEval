@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Gmail SMTP (RF-010, RI-002)
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
+    SMTP_SECURITY: str = "starttls"  # starttls (587) or tls (465)
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "integrieval@gmail.com"

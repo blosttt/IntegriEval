@@ -42,3 +42,5 @@ Estas reglas reemplazan la restricción anterior de ayudante de solo consulta pa
 ## Funciones operativas
 
 Incluye recuperación de contraseña, historial de correos, avisos de citas, validación de agenda, cierre/archivo de evaluaciones, exportación CSV/PDF y cola persistente de PDF con reintentos. Ver [avance y configuración pendiente](../docs/AVANCE_FUNCIONALIDADES.md). SMTP e IA reales requieren configuración del servidor.
+
+Para Gmail y Google Workspace, el superadministrador puede guardar la configuración, enviar una prueba y activar los envíos desde el panel. Ver [configuración de Gmail](../docs/CONFIGURAR_GMAIL.md). No se solicita la contraseña por chat ni se devuelve desde la API.

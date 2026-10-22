@@ -28,6 +28,7 @@ Estado al 22 de octubre de 2026. Las casillas marcadas indican código implement
    - [ ] Validar la calidad pedagógica de los resultados con docentes y casos representativos.
 2. **Envío real de correos**
    - [x] Implementar integración SMTP y enlaces configurables mediante `PUBLIC_APP_URL`.
+   - [x] Panel de configuración Gmail con guardado de credenciales sin devolverlas al navegador, prueba dirigida y activación tras confirmación de recepción.
    - [ ] Configurar la cuenta SMTP y una URL accesible por los destinatarios.
    - [ ] Verificar entrega real, recepción y acceso al enlace desde otro dispositivo. SMTP sigue desactivado.
 3. **Recuperación de contraseña**
