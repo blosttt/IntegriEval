@@ -49,3 +49,4 @@ node_modules/
 *.tsbuildinfo
 # Miscellaneous
 docs-seba
+/_archive/

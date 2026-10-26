@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -170,23 +170,13 @@ os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-@app.get("/login", response_class=HTMLResponse)
-async def serve_login():
-    login_file = TEMPLATES_DIR / "login.html"
-    if login_file.exists():
-        with open(login_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse("<h1>Login</h1>")
-
-@app.get("/", response_class=HTMLResponse)
-@app.get("/docente", response_class=HTMLResponse)
-@app.get("/panel", response_class=HTMLResponse)
-async def serve_teacher_dashboard():
-    index_file = TEMPLATES_DIR / "index.html"
-    if index_file.exists():
-        with open(index_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse("<h1>IntegriEval - Backend Activo</h1><p>Cargue la interfaz web en frontend/templates/index.html</p>")
+@app.get("/login", include_in_schema=False)
+@app.get("/", include_in_schema=False)
+@app.get("/docente", include_in_schema=False)
+@app.get("/panel", include_in_schema=False)
+async def redirect_legacy_interface():
+    # The modern frontend is the only entry point for interactive dashboards.
+    return RedirectResponse(settings.PUBLIC_APP_URL.rstrip("/") + "/", status_code=307)
 
 @app.get("/test/{token}", response_class=HTMLResponse)
 async def serve_student_flash_test(token: str):
