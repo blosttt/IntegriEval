@@ -47,3 +47,5 @@ node_modules/
 # Modern frontend dependency store and build cache
 .pnpm-store/
 *.tsbuildinfo
+# Miscellaneous
+docs-seba
