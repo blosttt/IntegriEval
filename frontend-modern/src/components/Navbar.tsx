@@ -84,9 +84,11 @@ export default function Navbar() {
               {role === "ayudante" ? "Ayudante" : "Docente"}
             </Link>
           )}
-          <Link href="/student/dashboard" className={navLink(path.startsWith("/student"))}>
-            Alumno
-          </Link>
+          {!teacher && !inTeacherArea && !path.startsWith("/admin") && (
+            <Link href="/student/dashboard" className={navLink(path.startsWith("/student"))}>
+              Alumno
+            </Link>
+          )}
         </nav>
       </div>
       <div className="flex items-center gap-3 max-[1000px]:gap-2 max-[720px]:ml-auto">

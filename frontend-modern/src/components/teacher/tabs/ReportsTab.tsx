@@ -243,6 +243,12 @@ export default function ReportsTab() {
                       {r.analysis_engine}
                       {r.analysis_fallback ? " · respaldo simulado" : ""}
                     </p>
+                    {r.analysis_status === "error" && <p className="text-xs text-red-400">Análisis incompleto. Reintenta; cualquier nota anterior es histórica.</p>}
+                    {r.evaluacion?.desglose?.cobertura_documento && <p className="text-xs text-muted">
+                      {r.evaluacion.desglose.cobertura_documento.caracteres_originales.toLocaleString("es-CL")} caracteres · {r.evaluacion.desglose.cobertura_documento.estrategia === "sintesis_por_secciones"
+                        ? `${r.evaluacion.desglose.cobertura_documento.secciones_originales} secciones sintetizadas`
+                        : "texto completo"}
+                    </p>}
                   </td>
                   <td className="py-3 font-semibold text-fg">
                     {scorePct != null ? `${scorePct}%` : "--"}

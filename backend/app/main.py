@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -178,11 +178,7 @@ async def redirect_legacy_interface():
     # The modern frontend is the only entry point for interactive dashboards.
     return RedirectResponse(settings.PUBLIC_APP_URL.rstrip("/") + "/", status_code=307)
 
-@app.get("/test/{token}", response_class=HTMLResponse)
+@app.get("/test/{token}", include_in_schema=False)
 async def serve_student_flash_test(token: str):
-    test_file = TEMPLATES_DIR / "flashtest.html"
-    if test_file.exists():
-        with open(test_file, "r", encoding="utf-8") as f:
-            content = f.read().replace("{{TOKEN}}", token)
-            return HTMLResponse(content=content)
-    return HTMLResponse(f"<h1>IntegriEval - Flash Test</h1><p>Token: {token}</p>")
+    from urllib.parse import quote
+    return RedirectResponse(settings.PUBLIC_APP_URL.rstrip("/") + "/flash/" + quote(token, safe=""), status_code=307)

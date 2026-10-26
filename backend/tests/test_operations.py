@@ -111,13 +111,13 @@ def test_real_ocr_when_language_data_installed(tmp_path,monkeypatch):
     assert 'Arquitectura' in extract_pdf_to_markdown(str(path))
 
 
-def test_llm_fallback_is_explicit(monkeypatch):
+def test_real_llm_timeout_never_simulates_results(monkeypatch):
     from backend.app.services import llm_service
     monkeypatch.setattr(settings,'LLM_PROVIDER','ollama')
     async def offline(*args,**kwargs):
         raise TimeoutError('Unavailable')
     monkeypatch.setattr(llm_service,'request_json',offline)
-    result=asyncio.run(llm_service.evaluate_submission_llm('Informe de ejemplo sobre arquitectura y pruebas.'))
-    assert result[0]['motor_analisis']=='mock' and result[0]['fallback_ia'] is True
-    questions=asyncio.run(llm_service.generate_question_pool_llm('Informe de ejemplo',pool_size=10))
-    assert all(q['_motor']=='mock' for q in questions)
+    with pytest.raises(llm_service.LLMUnavailable):
+        asyncio.run(llm_service.evaluate_submission_llm('Informe de ejemplo sobre arquitectura y pruebas.'))
+    with pytest.raises(llm_service.LLMUnavailable):
+        asyncio.run(llm_service.generate_question_pool_llm('Informe de ejemplo',pool_size=10))

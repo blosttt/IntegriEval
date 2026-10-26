@@ -55,6 +55,19 @@ async def dispatch_flash_tests(
         if not work or not work.evaluacion:
             continue
 
+        provenance = work.evaluacion.desglose or {}
+        if work.estado != "analizado":
+            if estudiante_ids is not None:
+                raise HTTPException(409, "El análisis no está completo. Reintenta el procesamiento antes de despachar el Flash Test.")
+            continue
+        if settings.LLM_PROVIDER != "mock" and (
+            provenance.get("fallback_ia") or provenance.get("motor_analisis") == "mock"
+            or provenance.get("motor_preguntas") == "mock"
+        ):
+            if estudiante_ids is not None:
+                raise HTTPException(409, "La evaluación contiene resultados simulados. Reanaliza el informe con la IA real antes de despachar el Flash Test.")
+            continue
+
         if not any(q.seleccionada for q in work.evaluacion.preguntas):
             continue
         if db.query(models.FlashTest).filter_by(estudiante_id=s.id, actividad_id=actividad_id, estado="completado").first():

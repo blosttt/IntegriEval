@@ -8,7 +8,7 @@ from backend.app import models, schemas
 from backend.app.config import settings
 from backend.app.auth import get_current_user, check_course_access
 from backend.app.services.pdf_service import extract_pdf_to_markdown, match_student_filename
-from backend.app.services.llm_service import evaluate_submission_llm, generate_question_pool_llm
+from backend.app.services.llm_service import evaluate_submission_llm, generate_question_pool_llm, LLMUnavailable
 from backend.app.audit import log_audit
 
 from backend.app.activities import parameters, work_for, assert_activity_open
@@ -16,6 +16,18 @@ from backend.app.activities import parameters, work_for, assert_activity_open
 router = APIRouter(tags=["Trabajos y Evaluación"])
 
 async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: Session, user_id: int):
+    try:
+        await _process_and_evaluate_trabajo(trabajo_id, asignatura_id, db, user_id)
+    except LLMUnavailable as exc:
+        db.rollback()
+        trabajo = db.get(models.Trabajo, trabajo_id)
+        if trabajo:
+            trabajo.estado = "error"
+            db.commit()
+        raise HTTPException(503, str(exc)) from exc
+
+
+async def _process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: Session, user_id: int):
     """
     Background or direct task:
     1. Extracts PDF into structured Markdown (RF-006)
@@ -29,13 +41,15 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
     course = db.query(models.Asignatura).filter(models.Asignatura.id == asignatura_id).first()
     assert_activity_open(asignatura_id, trabajo.actividad_id, db)
     course_params = parameters(course, trabajo.actividad_id, db)
+    trabajo.estado = "cargado"
+    db.commit()
     
     # 1. Semantic PDF extraction
     try:
         if trabajo.pdf_path and os.path.exists(trabajo.pdf_path):
             md_text = extract_pdf_to_markdown(trabajo.pdf_path)
             trabajo.markdown = md_text
-            trabajo.estado = "analizado"
+            trabajo.estado = "cargado"
             db.commit()
     except Exception as e:
         trabajo.estado = "error"
@@ -70,10 +84,19 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
         "requiere_defensa_oral": pct_ia >= float(course_params.get("umbral_ia", 40))
     }
 
-    # Delete existing evaluation if re-evaluating
+    # Generate both outputs before replacing any previously reviewed evaluation.
+    pool_size = int(course_params.get("pool_size", 15))
+    num_selected = int(course_params.get("num_preguntas_test", 5))
+    questions_data = await generate_question_pool_llm(
+        markdown_content=trabajo.markdown or "",
+        syllabus_content=syllabus_text,
+        pool_size=pool_size
+    )
+
+    # Replace evaluation and questions in one transaction, only after AI succeeds.
     if trabajo.evaluacion:
         db.delete(trabajo.evaluacion)
-        db.commit()
+        db.flush()
 
     evaluacion = models.Evaluacion(
         trabajo_id=trabajo.id,
@@ -83,17 +106,7 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
         desglose=anexo_a_data
     )
     db.add(evaluacion)
-    db.commit()
-    db.refresh(evaluacion)
-
-    # 3. Generate Question Pool (RF-008, 10-30 questions)
-    pool_size = int(course_params.get("pool_size", 15))
-    num_selected = int(course_params.get("num_preguntas_test", 5))
-    questions_data = await generate_question_pool_llm(
-        markdown_content=trabajo.markdown or "",
-        syllabus_content=syllabus_text,
-        pool_size=pool_size
-    )
+    db.flush()
 
     evaluacion.desglose = {**evaluacion.desglose, 'motor_preguntas': 'mock' if any(q.get('_motor') == 'mock' for q in questions_data) else settings.LLM_PROVIDER}
     for idx, q_dict in enumerate(questions_data):
@@ -108,6 +121,7 @@ async def process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db: 
         )
         db.add(pregunta)
 
+    trabajo.estado = "analizado"
     db.commit()
 
     log_audit(

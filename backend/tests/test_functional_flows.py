@@ -205,17 +205,16 @@ def test_edit_questions_and_validate_selection(client, db_session, seeded_teache
     assert client.post(path, headers=headers(teacher), json={'pregunta_ids':[question.id]}).status_code == 200
 
 
-def test_invalid_llm_response_falls_back(monkeypatch):
+def test_invalid_llm_response_stops_processing(monkeypatch):
     monkeypatch.setattr(settings, 'LLM_PROVIDER', 'openai')
     monkeypatch.setattr(settings, 'LLM_API_KEY', 'test')
     async def invalid(*args, **kwargs):
         return {'porcentaje_logro': 'invalido'}
     monkeypatch.setattr(llm_service, 'request_json', invalid)
-    evaluation, grade, percentage = asyncio.run(llm_service.evaluate_submission_llm('# Informe\nResultados y metodología.'))
-    assert evaluation['porcentaje_logro'].endswith('%')
-    assert 1 <= grade <= 7
-    pool = asyncio.run(llm_service.generate_question_pool_llm('Informe', pool_size=10))
-    assert len(pool) == 10
+    with pytest.raises(llm_service.LLMUnavailable):
+        asyncio.run(llm_service.evaluate_submission_llm('# Informe\nResultados y metodología.'))
+    with pytest.raises(llm_service.LLMUnavailable):
+        asyncio.run(llm_service.generate_question_pool_llm('Informe', pool_size=10))
 
 
 def test_student_management_and_material_removal(client, seeded_teacher, tmp_path, monkeypatch):

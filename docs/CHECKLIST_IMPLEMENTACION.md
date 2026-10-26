@@ -2,6 +2,8 @@
 
 Estado al 22 de octubre de 2026. Las casillas marcadas indican código implementado y verificado con el alcance descrito; no equivalen a validación de producción.
 
+Actualización del 26 de octubre: Flash Test integrado en la interfaz moderna, fallos de IA real sin respaldo simulado automático y análisis de informes completos mediante síntesis por secciones. Detalles y limitaciones en [FLUJO_FLASH_IA.md](FLUJO_FLASH_IA.md). Suite actual: 73 pruebas de backend aprobadas.
+
 ## Requisitos de interfaz y permisos
 
 - [x] Recuperar el diseño moderno y unificar las pantallas con la marca IntegryEval y el logo UCT.

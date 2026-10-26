@@ -9,7 +9,7 @@
   --color-muted: var(--ie-muted);
   --color-brand: var(--ie-blue);
   --color-brand-hover: var(--ie-blue-hover);
-  --color-brand-ink: #75c5f1;
+  --color-brand-ink: var(--ie-brand-ink);
   --color-brand-soft: rgb(20 139 208 / 0.07);
   --radius-panel: 10px;
   --radius-control: 7px;
@@ -94,3 +94,5 @@ body {
 
 :root{--ie-bg:#101010;--ie-surface:#17191d;--ie-raised:#202329;--ie-border:#2b2e34;--ie-text:#f4f4f5;--ie-muted:#a0a0a8;--ie-blue:#148bd0;--ie-blue-hover:#239ee6;color-scheme:dark}
 html[data-app-theme="light"]{--ie-bg:#f7f8fa;--ie-surface:#fff;--ie-raised:#edf0f4;--ie-border:#dce0e6;--ie-text:#181b23;--ie-muted:#626975;color-scheme:light}
+:root{--ie-brand-ink:#75c5f1}
+html[data-app-theme="light"]{--ie-brand-ink:#086b9f}
