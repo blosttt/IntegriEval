@@ -61,6 +61,9 @@ def save_config(data:GmailConfig,user=Depends(require_admin),db:Session=Depends(
         if not password:
             raise HTTPException(422,'Indica la contraseña de aplicación de Google')
         url=str(data.public_url).rstrip('/')
+        from backend.app.config import settings
+        if settings.ENVIRONMENT == 'production' and url != settings.PUBLIC_APP_URL.rstrip('/'):
+            raise HTTPException(422,'En producción el dominio se cambia en la configuración del servidor, junto con CORS y HTTPS')
         parsed=urlsplit(url)
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise HTTPException(422,'La URL de la aplicación no debe incluir credenciales, parámetros ni fragmentos')

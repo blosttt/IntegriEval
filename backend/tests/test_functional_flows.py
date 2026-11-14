@@ -160,7 +160,7 @@ def test_teacher_websocket_requires_authentication(client, seeded_teacher):
             pass
     teacher = seeded_teacher['teacher']
     token = create_access_token({'sub': str(teacher.id)})
-    with client.websocket_connect(f'/ws/panel/{course.id}?token={token}') as ws:
+    with client.websocket_connect(f'/ws/panel/{course.id}', subprotocols=['integrieval', 'bearer.' + token]) as ws:
         ws.send_json({'type': 'PING', 'ts': 1})
         assert ws.receive_json()['type'] == 'PONG'
 

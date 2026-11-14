@@ -37,14 +37,15 @@ def update_pregunta(
     assert_editable(pregunta.evaluacion, db)
     datos_previos = {"texto": pregunta.texto, "seleccionada": pregunta.seleccionada}
 
-    if data.texto is not None:
-        pregunta.texto = data.texto
-    if data.alternativas is not None:
-        pregunta.alternativas = [a.model_dump() for a in data.alternativas]
-    if data.seleccionada is not None:
-        pregunta.seleccionada = data.seleccionada
-    if data.justificacion_respuesta is not None:
-        pregunta.justificacion_respuesta = data.justificacion_respuesta
+    updates = data.model_dump(exclude_unset=True)
+    updates = {key: value for key, value in updates.items() if value is not None or key in {'respuesta_referencia', 'criterios_evaluacion'}}
+    current = {key: getattr(pregunta, key) for key in schemas.PreguntaCreate.model_fields}
+    try:
+        valid = schemas.PreguntaCreate.model_validate({**current, **updates})
+    except ValueError:
+        raise HTTPException(422, "Revisa el enunciado, tipo, alternativas y criterios de evaluación")
+    for key, value in valid.model_dump().items():
+        setattr(pregunta, key, value)
 
     db.commit()
     db.refresh(pregunta)
@@ -100,7 +101,9 @@ def select_questions_for_test(
 
 
 def assert_editable(evaluacion, db):
-    from backend.app.activities import assert_activity_open
-    assert_activity_open(evaluacion.trabajo.estudiante.asignatura_id, evaluacion.trabajo.actividad_id, db)
+    from backend.app.activities import assert_activity_open, lock_question_plan
+    course_id = evaluacion.trabajo.estudiante.asignatura_id
+    lock_question_plan(course_id, db)
+    assert_activity_open(course_id, evaluacion.trabajo.actividad_id, db)
     if db.query(models.FlashTest).filter_by(estudiante_id=evaluacion.trabajo.estudiante_id, actividad_id=evaluacion.trabajo.actividad_id).first():
         raise HTTPException(409, "El test ya fue despachado; sus preguntas no pueden modificarse")

@@ -26,8 +26,9 @@ def main():
     print("=" * 70)
     print(f"[*] Servidor Web Activo en: http://{settings.HOST}:{settings.PORT}")
     print(f"[*] Documentacion OpenAPI:   http://{settings.HOST}:{settings.PORT}/docs")
-    print(f"[*] Docente por defecto:     docente@universidad.cl / Docente123!")
-    print(f"[*] Proveedor LLM:          {settings.LLM_PROVIDER} (Mock Heuristico RF-014 activo)")
+    if settings.SEED_DEMO_DATA:
+        print("[*] Cuentas de demostración habilitadas (solo desarrollo)")
+    print(f"[*] Proveedor LLM:          {settings.LLM_PROVIDER}")
     print(f"[*] Hashing Bcrypt:         Factor {settings.BCRYPT_ROUNDS} (RNF-005)")
     print("=" * 70)
 
@@ -35,7 +36,7 @@ def main():
         "backend.app.main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=True,
+        reload=settings.ENVIRONMENT == 'development',
         log_level="info"
     )
 

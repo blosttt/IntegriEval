@@ -2,6 +2,27 @@
 from sqlalchemy import inspect
 
 
+def upgrade_questions(engine):
+    if engine.dialect.name != 'sqlite':
+        return
+    columns = {column['name'] for column in inspect(engine).get_columns('preguntas')}
+    additions = {'tipo': "VARCHAR(20) NOT NULL DEFAULT 'alternativas'", 'respuesta_referencia': 'TEXT', 'criterios_evaluacion': 'TEXT', 'pool_general': 'BOOLEAN NOT NULL DEFAULT 0'}
+    missing = {key: value for key, value in additions.items() if key not in columns}
+    if not missing:
+        return
+    import sqlite3
+    from contextlib import closing
+    from datetime import datetime
+    path = engine.url.database
+    if path and path != ':memory:':
+        with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(path + '.before-development-' + datetime.now().strftime('%Y%m%d%H%M%S') + '.bak')) as backup:
+            source.backup(backup)
+            backup.commit()
+    with engine.begin() as connection:
+        for name, definition in missing.items():
+            connection.exec_driver_sql(f'ALTER TABLE preguntas ADD COLUMN {name} {definition}')
+
+
 def upgrade_activities(engine):
     if engine.dialect.name != 'sqlite':
         return

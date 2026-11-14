@@ -5,6 +5,8 @@ ENV/
 .env
 .env.*
 .smtp-*.tmp
+.setup-*.tmp
+deploy/runtime/
 
 # Python
 __pycache__/
@@ -22,6 +24,9 @@ integrieval.db
 
 # Uploads & temporary artifacts
 uploads/
+backups/
+*.backup.zip
+pilot-results/
 *.log
 
 # IDE & OS

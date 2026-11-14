@@ -1,6 +1,14 @@
 """Evaluation scopes. NULL preserves the original course evaluation and its history."""
 from fastapi import HTTPException
+from sqlalchemy import update
 from backend.app import models
+
+
+def lock_question_plan(course_id, db):
+    # Serialize selection and dispatch before either reads the question set.
+    db.execute(update(models.Asignatura).where(models.Asignatura.id == course_id)
+               .values(docente_id=models.Asignatura.docente_id))
+    db.expire_all()
 
 
 def parameters(course, activity_id, db):

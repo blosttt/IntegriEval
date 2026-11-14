@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SessionBoundary from "@/components/SessionBoundary";
 
 export const metadata: Metadata = {
   title: "IntegryEval - Validación de Autoría Académica",
@@ -17,7 +18,7 @@ export default function RootLayout({
       lang="es"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><SessionBoundary>{children}</SessionBoundary></body>
     </html>
   );
 }

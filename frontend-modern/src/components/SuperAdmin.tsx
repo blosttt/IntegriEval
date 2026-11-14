@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Search, Plus, ArrowRight, Pencil, ShieldCheck, GraduationCap, Users } from "lucide-react";
 import IntegrationStatus from "./IntegrationStatus";
 import GmailSettings from "./GmailSettings";
+import Readiness from "./Readiness";
 import Navbar from "./Navbar";
 import Dialog from "./Dialog";
 import { api, request } from "@/lib/api";
@@ -108,7 +109,8 @@ export default function SuperAdmin() {
           <>
             <div className="flex flex-wrap items-center gap-4">
               <IntegrationStatus />
-              <GmailSettings />
+            <GmailSettings />
+            <Readiness />
             </div>
             <label className="mb-7 flex max-w-[700px] items-center gap-3 rounded-[7px] border border-line bg-surface px-4 py-[13px] text-muted">
               <Search size={18} />

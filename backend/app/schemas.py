@@ -40,6 +40,7 @@ class ParametrosConfig(BaseModel):
     titulo_evaluacion: str = "Evaluación de informes"
     prompt_custom: str = ""
     nivel_rigor: Literal["low", "medium", "high"] = "medium"
+    requiere_rubrica: bool = False
     pool_size: int = Field(default=15, ge=10, le=30)  # RF-003 (10-30)
     num_preguntas_test: int = Field(default=5, ge=1, le=15)
     umbral_ia: float = Field(default=40.0, ge=0.0, le=100.0)
@@ -189,20 +190,33 @@ class AlternativaItem(BaseModel):
     es_correcta: bool
 
 class PreguntaCreate(BaseModel):
-    texto: str
-    alternativas: List[AlternativaItem]
+    texto: str = Field(min_length=1, max_length=10000)
+    tipo: Literal["alternativas", "desarrollo"] = "alternativas"
+    alternativas: List[AlternativaItem] = Field(default_factory=list)
+    respuesta_referencia: Optional[str] = Field(default=None, max_length=10000)
+    criterios_evaluacion: Optional[str] = Field(default=None, max_length=10000)
     seleccionada: bool = False
     justificacion_respuesta: Optional[str] = None
     seccion_origen: Optional[str] = None
 
-    @field_validator("alternativas")
-    @classmethod
-    def valid_options(cls, value):
-        validate_options(value)
-        return value
+    @model_validator(mode="after")
+    def valid_question(self):
+        if not self.texto.strip():
+            raise ValueError("El enunciado no puede estar vacío")
+        if self.tipo == "desarrollo":
+            if self.alternativas:
+                raise ValueError("Una pregunta de desarrollo no lleva alternativas")
+            if not (self.criterios_evaluacion or "").strip():
+                raise ValueError("Indica los criterios de evaluación de la pregunta de desarrollo")
+        else:
+            validate_options(self.alternativas)
+        return self
 
 class PreguntaUpdate(BaseModel):
-    texto: Optional[str] = None
+    texto: Optional[str] = Field(default=None, min_length=1, max_length=10000)
+    tipo: Optional[Literal["alternativas", "desarrollo"]] = None
+    respuesta_referencia: Optional[str] = Field(default=None, max_length=10000)
+    criterios_evaluacion: Optional[str] = Field(default=None, max_length=10000)
     alternativas: Optional[List[AlternativaItem]] = None
     seleccionada: Optional[bool] = None
     justificacion_respuesta: Optional[str] = None
@@ -210,7 +224,7 @@ class PreguntaUpdate(BaseModel):
     @field_validator("alternativas")
     @classmethod
     def valid_options(cls, value):
-        if value is not None:
+        if value:
             validate_options(value)
         return value
 
@@ -218,8 +232,12 @@ class PreguntaOut(BaseModel):
     id: int
     evaluacion_id: int
     texto: str
+    tipo: Literal["alternativas", "desarrollo"] = "alternativas"
+    respuesta_referencia: Optional[str] = None
+    criterios_evaluacion: Optional[str] = None
     alternativas: List[Dict[str, Any]]
     seleccionada: bool
+    pool_general: bool = False
     justificacion_respuesta: Optional[str] = None
     seccion_origen: Optional[str] = None
 
@@ -261,7 +279,7 @@ class FlashTestOut(BaseModel):
     token: str
     vigencia: datetime
     respuestas: Dict[str, Any]
-    puntaje: float
+    puntaje: Optional[float]
     tiempo_limite_segundos: int
     tiempo_transcurrido: int
     estado: str
@@ -296,6 +314,7 @@ class PanelEstudianteFila(BaseModel):
     flash_test_token: Optional[str] = None
     flash_test_id: Optional[int] = None
     flash_test_estado: Optional[str] = None
+    desarrollo_pendiente: bool = False
 
 class PanelResultadosOut(BaseModel):
     asignatura_id: int

@@ -315,17 +315,17 @@ export function Badge({ tone, children }: { tone: keyof typeof badgeTones; child
 }
 
 const bannerTones = {
-  error: "border-[#f8717140] bg-[#f8717112] text-[#ffb4b4]",
-  success: "border-[#34d39940] bg-[#34d39910] text-[#84dbb3]",
+  error: "border-[#f8717140] bg-[#f8717112] text-[var(--ie-error-ink)]",
+  success: "border-[#34d39940] bg-[#34d39910] text-[var(--ie-success-ink)]",
 } as const;
 
 export function Banner({
   tone,
   children,
   ...rest
-}: HTMLAttributes<HTMLParagraphElement> & { tone: keyof typeof bannerTones }) {
+}: HTMLAttributes<HTMLDivElement> & { tone: keyof typeof bannerTones }) {
   return (
-    <p
+    <div
       className={cx(
         "mb-4 rounded-[7px] border px-4 py-[13px] text-[13px] leading-[1.6]",
         bannerTones[tone],
@@ -333,7 +333,7 @@ export function Banner({
       {...rest}
     >
       {children}
-    </p>
+    </div>
   );
 }
 

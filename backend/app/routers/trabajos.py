@@ -10,6 +10,7 @@ from backend.app.auth import get_current_user, check_course_access
 from backend.app.services.pdf_service import extract_pdf_to_markdown, match_student_filename
 from backend.app.services.llm_service import evaluate_submission_llm, generate_question_pool_llm, LLMUnavailable
 from backend.app.audit import log_audit
+from backend.app.services.assessment import configured_context, rubric_text as format_rubric
 
 from backend.app.activities import parameters, work_for, assert_activity_open
 
@@ -66,11 +67,22 @@ async def _process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db:
     syllabus_text = "\n\n".join(m.markdown for m in materials if m.tipo in ["syllabus", "guia"])
     rubric_text = "\n\n".join(m.markdown for m in materials if m.tipo == "rubrica")
 
+    setup = configured_context(db, asignatura_id, trabajo.actividad_id)
+    if course_params.get("requiere_rubrica") and not setup:
+        trabajo.estado = "error"
+        db.commit()
+        raise HTTPException(422, "Guarda la rubrica de la evaluacion antes de analizar informes.")
+    if setup:
+        rubric_text_input = format_rubric(setup)
+        rubric_text_full = rubric_text_input + "\n" + setup["rubrica_documento"]
+        syllabus_text = f'Temas: {setup["temas"]}\nMaterial de clase:\n{setup["clase"]}\nMaterial del semestre:\n{setup["semestre"]}'
+    else:
+        rubric_text_full = rubric_text
     # 2. Run LLM / Mock evaluation (RF-007)
     anexo_a_data, nota_preliminar, pct_ia = await evaluate_submission_llm(
         markdown_content=trabajo.markdown or "",
         syllabus_content=syllabus_text,
-        rubric_content=rubric_text,
+        rubric_content=rubric_text_full,
         nivel_rigor=course_params.get("nivel_rigor", "medium"),
         umbral_ia=float(course_params.get("umbral_ia", 40.0)),
         umbral_coherencia=float(course_params.get("umbral_coherencia", 60.0)),
@@ -87,11 +99,19 @@ async def _process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db:
     # Generate both outputs before replacing any previously reviewed evaluation.
     pool_size = int(course_params.get("pool_size", 15))
     num_selected = int(course_params.get("num_preguntas_test", 5))
-    questions_data = await generate_question_pool_llm(
-        markdown_content=trabajo.markdown or "",
-        syllabus_content=syllabus_text,
-        pool_size=pool_size
-    )
+    if setup:
+        if len(setup["criterios"]) > num_selected:
+            raise LLMUnavailable("Ajusta el numero de preguntas para cubrir todos los criterios.")
+        anexo_a_data["rubrica_aplicada"] = {
+            "version": setup["version"], "criterios": setup["criterios"], "temas": setup["temas"],
+        }
+        questions_data = await generate_rubric_pool(trabajo.markdown, syllabus_text, setup, num_selected, pool_size)
+    else:
+        questions_data = await generate_question_pool_llm(
+            markdown_content=trabajo.markdown or "",
+            syllabus_content=syllabus_text,
+            pool_size=pool_size
+        )
 
     # Replace evaluation and questions in one transaction, only after AI succeeds.
     if trabajo.evaluacion:
@@ -110,7 +130,7 @@ async def _process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db:
 
     evaluacion.desglose = {**evaluacion.desglose, 'motor_preguntas': 'mock' if any(q.get('_motor') == 'mock' for q in questions_data) else settings.LLM_PROVIDER}
     for idx, q_dict in enumerate(questions_data):
-        is_sel = idx < num_selected
+        is_sel = q_dict.get("seleccionada", idx < num_selected)
         pregunta = models.Pregunta(
             evaluacion_id=evaluacion.id,
             texto=q_dict["texto"],
@@ -137,6 +157,40 @@ async def _process_and_evaluate_trabajo(trabajo_id: int, asignatura_id: int, db:
             "total_preguntas": len(questions_data)
         }
     )
+
+async def generate_rubric_pool(markdown, context, setup, count, configured_size):
+    from backend.app.config import settings
+    criteria = setup["criterios"]
+    quota, extra = divmod(max(configured_size, 3 * count), len(criteria))
+    result = []
+    selected, seen = [], set()
+    for index, criterion in enumerate(criteria):
+        target = quota + (index < extra)
+        instruction = (
+            f'Criterio obligatorio: {criterion["nombre"]}. {criterion["descripcion"]}. '
+            'Incluye preguntas para explicar y justificar, y al menos una para aplicar el concepto '
+            'a un caso nuevo parecido, con cambios concretos respecto del informe.'
+        )
+        for offset in range(0, target, 8):
+            batch = min(8, target - offset)
+            questions = await generate_question_pool_llm(markdown, context, batch, focus=instruction, exclude=sorted(seen))
+            for batch_index, item in enumerate(questions, start=1):
+                if settings.LLM_PROVIDER == "mock":
+                    item["texto"] = f'{criterion["nombre"]} ({offset + batch_index}): {item["texto"]}'
+                key = " ".join(item["texto"].casefold().split())
+                if key in seen:
+                    raise LLMUnavailable("El pool generado contiene preguntas repetidas. Reintenta el analisis.")
+                seen.add(key)
+                item["seccion_origen"] = criterion["nombre"]
+                item["seleccionada"] = False
+            if offset == 0:
+                selected.append(questions[0])
+            result.extend(questions)
+    selected.extend([q for q in result if q not in selected][:count - len(selected)])
+    for item in selected:
+        item["seleccionada"] = True
+    return result
+
 
 @router.post("/api/asignaturas/{asignatura_id}/trabajos/upload")
 async def upload_trabajo_single(

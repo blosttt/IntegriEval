@@ -121,7 +121,66 @@ class Evaluacion(Base):
     fecha_creacion = Column(DateTime, default=utc_now)
 
     trabajo = relationship("Trabajo", back_populates="evaluacion")
-    preguntas = relationship("Pregunta", back_populates="evaluacion", cascade="all, delete-orphan")
+    preguntas = relationship("Pregunta", back_populates="evaluacion", cascade="all, delete-orphan", order_by="Pregunta.id")
+    adaptive_plan = relationship("AdaptivePlan", uselist=False, cascade="all, delete-orphan")
+
+class RubricTemplate(Base):
+    __tablename__ = "rubric_templates"
+
+    id = Column(Integer, primary_key=True)
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), nullable=False, index=True)
+    nombre = Column(String(120), nullable=False)
+    criterios = Column(JSON, nullable=False)
+    __table_args__ = (UniqueConstraint("asignatura_id", "nombre"),)
+
+
+class AdaptivePlan(Base):
+    __tablename__ = "adaptive_plans"
+
+    evaluacion_id = Column(Integer, ForeignKey("evaluaciones.id", ondelete="CASCADE"), primary_key=True)
+    reglas = Column(JSON, nullable=False)
+
+
+class AdaptiveSession(Base):
+    __tablename__ = "adaptive_sessions"
+
+    test_id = Column(Integer, ForeignKey("flash_tests.id", ondelete="CASCADE"), primary_key=True)
+    reglas = Column(JSON, nullable=False)
+
+
+class CalibrationRun(Base):
+    __tablename__ = "calibration_runs"
+
+    test_id = Column(Integer, ForeignKey("flash_tests.id"), primary_key=True)
+    resultado = Column(JSON, nullable=False)
+
+
+class AssessmentSetup(Base):
+    __tablename__ = "assessment_setups"
+
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), primary_key=True)
+    actividad_key = Column(Integer, primary_key=True)
+    version = Column(Integer, nullable=False)
+    contenido = Column(JSON, nullable=False)
+
+
+class AssessmentReview(Base):
+    __tablename__ = "assessment_reviews"
+
+    test_id = Column(Integer, ForeignKey("flash_tests.id"), primary_key=True)
+    ia = Column(JSON, nullable=True)
+    docente = Column(JSON, nullable=True)
+    contraste = Column(JSON, nullable=True)
+
+
+class GeneralQuestion(Base):
+    __tablename__ = "general_questions"
+
+    id = Column(Integer, primary_key=True)
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id", ondelete="CASCADE"), nullable=False, index=True)
+    actividad_key = Column(Integer, nullable=False)  # 0 = original evaluation
+    contenido = Column(JSON, nullable=False)
+
 
 class Pregunta(Base):
     __tablename__ = "preguntas"
@@ -129,7 +188,11 @@ class Pregunta(Base):
     id = Column(Integer, primary_key=True, index=True)
     evaluacion_id = Column(Integer, ForeignKey("evaluaciones.id"), nullable=False)
     texto = Column(Text, nullable=False)
+    tipo = Column(String(20), nullable=False, default="alternativas", server_default="alternativas")
+    respuesta_referencia = Column(Text, nullable=True)
+    criterios_evaluacion = Column(Text, nullable=True)
     alternativas = Column(JSON, nullable=False)  # [{"id": "A", "texto": "...", "es_correcta": bool}, ...]
+    pool_general = Column(Boolean, nullable=False, default=False, server_default="0")
     seleccionada = Column(Boolean, default=False)  # Docente selecciona N <= Pool (RF-009)
     justificacion_respuesta = Column(Text, nullable=True)
     seccion_origen = Column(String(100), nullable=True)
@@ -204,6 +267,17 @@ class FlashTestState(Base):
     preguntas = Column(JSON, nullable=False)
     indice = Column(Integer, default=0, nullable=False)
     inicio_pregunta = Column(DateTime, nullable=True)
+    adaptive = relationship("AdaptiveSession", uselist=False, primaryjoin="FlashTestState.test_id == foreign(AdaptiveSession.test_id)", viewonly=True)
+
+
+class DevelopmentReview(Base):
+    __tablename__ = "development_reviews"
+    test_id = Column(Integer, ForeignKey("flash_tests.id"), primary_key=True)
+    pregunta_id = Column(Integer, ForeignKey("preguntas.id"), primary_key=True)
+    puntaje = Column(Float, nullable=False)
+    comentario = Column(Text, nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    reviewed_at = Column(UTCDateTime, default=utc_now, onupdate=utc_now)
 
 
 class TeacherAvailability(Base):
@@ -309,3 +383,10 @@ class SmtpVerification(Base):
     config_hash = Column(String(64), nullable=False)
     recipient = Column(String(200), nullable=False)
     verified_at = Column(UTCDateTime, default=utc_now)
+
+
+class AuthThrottle(Base):
+    __tablename__ = "auth_throttle"
+    key_hash = Column(String(64), primary_key=True)
+    window_start = Column(Integer, nullable=False)
+    attempts = Column(Integer, nullable=False, default=1)

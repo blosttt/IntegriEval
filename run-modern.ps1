@@ -20,6 +20,17 @@ if ((Test-Path -LiteralPath $environmentFile) -and (Get-Content -LiteralPath $en
     & (Join-Path $projectDir 'start-ollama.ps1')
 }
 $backendProcess = $null
+$frontendRunning = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue
+if ($frontendRunning) {
+    $backendRunning = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
+    if ($backendRunning) {
+        Write-Host 'La aplicación ya está iniciada: http://127.0.0.1:3000'
+        return
+    }
+    Write-Host 'La interfaz ya está iniciada. Arrancando el backend en esta terminal.'
+    & $pythonExe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level warning
+    return
+}
 try {
     $backendRunning = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
     if (!$backendRunning) {
@@ -32,7 +43,6 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar la interfaz moderna.' }
         }
         Write-Host 'IntegriEval moderno: http://127.0.0.1:3000'
-        Write-Host 'Docente: docente@universidad.cl / Docente123!'
         & $nodeExe $nextCli start --hostname 127.0.0.1 --port 3000
     } finally { Pop-Location }
 } finally {

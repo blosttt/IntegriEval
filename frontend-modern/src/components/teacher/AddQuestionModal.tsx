@@ -1,48 +1,71 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useDashboard, usePersistentState } from "./DashboardContext";
-import { Button, Field, Input, ModalFrame, Select, Textarea } from "./ui";
+import { Banner, Button, Field, Input, ModalFrame, Select, Textarea } from "./ui";
 
-export default function AddQuestionModal({ onClose }: { onClose: () => void }) {
+export default function AddQuestionModal({ onClose, onSave, question, criteriaNames }: {
+  onClose: () => void;
+  onSave?: (data: any) => Promise<void>;
+  question?: any;
+  criteriaNames?: string[];
+}) {
+  const [criterion, setCriterion] = useState<string>(question?.seccion_origen || "");
+  const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState('');
   const { selectedReportId, selectedEval, setSuccess, setError, setQuestionBank } = useDashboard();
-  const [text, setText] = usePersistentState("question.text", "");
-  const [type, setType] = usePersistentState<"multiple_choice" | "true_false">(
-    "question.type",
-    "multiple_choice",
+  const draftKey = (field: string) => onSave ? null : "question." + field;
+  const [text, setText] = usePersistentState(draftKey("text"), question?.text ?? "");
+  const [type, setType] = usePersistentState<"multiple_choice" | "true_false" | "open_ended">(
+    draftKey("type"),
+    question?.type ?? "multiple_choice",
   );
-  const [options, setOptions] = usePersistentState<string[]>("question.options", ["", "", "", ""]);
-  const [correct, setCorrect] = usePersistentState("question.correct", "0");
+  const [options, setOptions] = usePersistentState<string[]>(draftKey("options"), question?.options ?? ["", "", "", ""]);
+  const [correct, setCorrect] = usePersistentState(draftKey("correct"), question?.correct_answer ?? "0");
+  const [reference, setReference] = usePersistentState(draftKey("reference"), question?.reference_answer ?? "");
+  const [criteria, setCriteria] = usePersistentState(draftKey("criteria"), question?.grading_criteria ?? "");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedReportId || !text) return;
+    if ((!selectedReportId && !onSave) || !text || busy) return;
+    setBusy(true);
+    setLocalError('');
     try {
-      await api.createQuestion(selectedReportId, {
+      const data = {
         text,
         type,
-        options: type === "multiple_choice" ? options : ["Verdadero", "Falso"],
+        seccion_origen: criterion || null,
+        options: type === "multiple_choice" ? options : type === "true_false" ? ["Verdadero", "Falso"] : [],
+        reference_answer: reference,
+        grading_criteria: criteria,
         correct_answer: correct,
         limit_seconds: selectedEval?.time_per_question || 30,
-      });
-      setSuccess("Pregunta agregada al pool.");
+      };
+      if (onSave) await onSave(data);
+      else {
+        await api.createQuestion(selectedReportId!, data);
+        setQuestionBank(await api.getQuestionBank(selectedReportId!));
+      }
+      setSuccess(question ? "Pregunta actualizada." : "Pregunta agregada al pool.");
       onClose();
       setText("");
       setOptions(["", "", "", ""]);
       setCorrect("0");
-      setQuestionBank(await api.getQuestionBank(selectedReportId));
+      setReference("");
+      setCriteria("");
     } catch (err: any) {
+      setLocalError(err.message || 'No se pudo crear la pregunta');
       setError(err.message || "Error al crear pregunta");
-    }
+    } finally { setBusy(false); }
   };
 
   return (
     <ModalFrame className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-fg">Agregar Pregunta Personalizada al Pool</h3>
-        <Button variant="muted" onClick={onClose}>
+        <h3 className="text-sm font-bold text-fg">{question ? "Editar pregunta del pool general" : onSave ? "Agregar pregunta al pool general" : "Agregar Pregunta Personalizada al Pool"}</h3>
+        <Button variant="muted" disabled={busy} onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -59,11 +82,24 @@ export default function AddQuestionModal({ onClose }: { onClose: () => void }) {
         </Field>
 
         <Field label="Tipo de Pregunta">
-          <Select value={type} onChange={(e) => setType(e.target.value as "multiple_choice" | "true_false")}>
+          <Select value={type} onChange={(e) => {
+            const next = e.target.value as "multiple_choice" | "true_false" | "open_ended";
+            if (next === "multiple_choice" && options.length < 4) setOptions(["", "", "", ""]);
+            setCorrect("0");
+            setType(next);
+          }}>
             <option value="multiple_choice">Selección Múltiple (4 alternativas)</option>
             <option value="true_false">Verdadero / Falso</option>
+            <option value="open_ended">Desarrollo (respuesta escrita)</option>
           </Select>
         </Field>
+
+        {!!criteriaNames?.length && <Field label="Criterio de la rúbrica">
+          <Select value={criterion} onChange={e => setCriterion(e.target.value)}>
+            <option value="">Sin criterio asignado</option>
+            {criteriaNames.map(name => <option key={name}>{name}</option>)}
+          </Select>
+        </Field>}
 
         {type === "multiple_choice" && (
           <div className="space-y-2">
@@ -121,8 +157,19 @@ export default function AddQuestionModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <Button type="submit" size="block" className="py-2.5">
-          Guardar Pregunta
+        {type === "open_ended" && <div className="space-y-3">
+          <Field label="Criterios de evaluación (solo docente)">
+            <Textarea rows={3} required maxLength={10000} value={criteria} onChange={e => setCriteria(e.target.value)} placeholder="Qué debe explicar el estudiante y cómo se asignará el puntaje." />
+          </Field>
+          <Field label="Respuesta de referencia (opcional, solo docente)">
+            <Textarea rows={3} maxLength={10000} value={reference} onChange={e => setReference(e.target.value)} />
+          </Field>
+          <p className="text-xs text-muted">El estudiante escribirá su respuesta. La corrección será manual, de 0 a 100 puntos. Cada pregunta tiene el mismo peso. Revisa que el tiempo por pregunta de la evaluación sea suficiente.</p>
+        </div>}
+
+        {localError && <Banner tone="error" role="alert">{localError}</Banner>}
+        <Button type="submit" disabled={busy} size="block" className="py-2.5">
+          {busy ? 'Guardando…' : 'Guardar Pregunta'}
         </Button>
       </form>
     </ModalFrame>

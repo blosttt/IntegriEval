@@ -25,6 +25,7 @@ def isolate_external_integrations(monkeypatch):
     from backend.app.config import settings
     monkeypatch.setattr(settings, 'LLM_PROVIDER', 'mock')
     monkeypatch.setattr(settings, 'SMTP_ENABLED', False)
+    monkeypatch.setattr(settings, 'BACKUP_ENABLED', False)
 
 @pytest.fixture(scope="function")
 def db_session():

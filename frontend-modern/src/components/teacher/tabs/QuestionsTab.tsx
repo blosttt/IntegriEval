@@ -1,15 +1,22 @@
 "use client";
 
 import { Check, Edit, Mail, Plus, Sparkles, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import AddQuestionModal from "../AddQuestionModal";
+import AdaptiveEditor from "../AdaptiveEditor";
+import GeneralPool from "./GeneralPool";
+import DevelopmentReview from "../DevelopmentReview";
 import { useDashboard, usePersistentState } from "../DashboardContext";
-import { Button, Hint, Panel, cx } from "../ui";
+import { Button, Field, Hint, Panel, Select, cx } from "../ui";
 
 export default function QuestionsTab() {
   const {
     selectedReport,
     selectedReportId,
+    setSelectedReport,
+    setSelectedReportId,
+    reports,
     selectedEval,
     selectedEvalId,
     questionBank,
@@ -23,6 +30,21 @@ export default function QuestionsTab() {
   } = useDashboard();
   const [showAddModal, setShowAddModal] = usePersistentState("questions.showAddModal", false);
   const flashCount = selectedEval?.flash_questions_count || 10;
+  const [loadingPool, setLoadingPool] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  const [assignmentRevision, setAssignmentRevision] = useState(0);
+  const currentReport = reports.some(report => report.id === selectedReportId);
+  const chooseReport = async (id: number) => {
+    const report = reports.find(item => item.id === id);
+    setSelectedReportId(null); setSelectedReport(null); setQuestionBank(null); setSelectedQIds([]);
+    if (!report) return;
+    setLoadingPool(true); setError('');
+    try {
+      const bank = await api.getQuestionBank(id);
+      setSelectedReportId(id); setSelectedReport(report); setQuestionBank(bank); setSelectedQIds(bank.selected_question_ids || []);
+    } catch (error: any) { setError(error.message); }
+    finally { setLoadingPool(false); }
+  };
 
   const toggleSelect = (questionId: number) =>
     setSelectedQIds((previous) =>
@@ -37,6 +59,7 @@ export default function QuestionsTab() {
       const bank = await api.selectRandomQuestions(selectedReportId);
       setQuestionBank(bank);
       setSelectedQIds(bank.selected_question_ids || []);
+      setAssignmentRevision(previous => previous + 1);
       setSuccess("Preguntas seleccionadas aleatoriamente.");
     } catch (err: any) {
       setError(err.message || "Error al seleccionar aleatoriamente");
@@ -53,6 +76,7 @@ export default function QuestionsTab() {
     try {
       await api.selectQuestions(selectedReportId, selectedQIds);
       const dispatch = await api.sendFlashTest(selectedReportId);
+      setAssignmentRevision(previous => previous + 1);
       const item = dispatch.items?.[0];
       if (!item) {
         setError("El test ya fue completado o no hay preguntas seleccionadas.");
@@ -74,6 +98,18 @@ export default function QuestionsTab() {
   const editQuestion = async (question: any) => {
     const text = window.prompt("Enunciado de la pregunta:", question.text);
     if (!text) return;
+    if (question.type === 'open_ended') {
+      const criteria = window.prompt('Criterios de evaluación (solo docente):', question.grading_criteria);
+      if (!criteria?.trim()) return;
+      const reference = window.prompt('Respuesta de referencia (opcional, solo docente):', question.reference_answer);
+      if (reference === null) return;
+      try {
+        await api.updateQuestion(selectedReportId!, question.id, { text, type: 'open_ended', grading_criteria: criteria, reference_answer: reference });
+        setQuestionBank(await api.getQuestionBank(selectedReportId!));
+        setSuccess('Pregunta de desarrollo actualizada');
+      } catch (error: any) { setError(error.message); }
+      return;
+    }
     const raw = window.prompt("Alternativas (lista JSON):", JSON.stringify(question.options));
     if (!raw) return;
     const answer = window.prompt(
@@ -111,6 +147,19 @@ export default function QuestionsTab() {
 
   return (
     <div className="space-y-6">
+      {selectedEvalId && selectedEval && <GeneralPool key={selectedEvalId}
+        evaluationId={selectedEvalId} count={flashCount} readOnly={selectedEval.estado !== "abierta"}
+        revision={assignmentRevision} onDrawing={setDrawing}
+        onDrawn={async () => { if (selectedReportId && currentReport) await chooseReport(selectedReportId); }} />}
+      <Panel>
+        <Field label="Informe del estudiante para este pool">
+          <Select value={currentReport ? selectedReportId || '' : ''} disabled={loadingPool || drawing} onChange={event => chooseReport(Number(event.target.value))}>
+            <option value="">Selecciona un informe analizado</option>
+            {reports.filter(report => report.evaluacion?.id).map(report => <option key={report.id} value={report.id}>{report.student_name}</option>)}
+          </Select>
+        </Field>
+        <Hint>El pool pertenece al informe seleccionado. Primero carga y analiza un informe en «Trabajos & Análisis IA».</Hint>
+      </Panel>
       <Panel
         size="lg"
         stack={false}
@@ -130,11 +179,11 @@ export default function QuestionsTab() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="toolbar" onClick={selectRandom}>
+          <Button variant="outline" size="toolbar" disabled={!currentReport || loadingPool || drawing} onClick={selectRandom}>
             <Sparkles className="h-3.5 w-3.5 text-brand-ink" />
             Selección Aleatoria ({flashCount})
           </Button>
-          <Button variant="outline" size="toolbar" onClick={() => setShowAddModal(true)}>
+          <Button variant="outline" size="toolbar" disabled={!currentReport || loadingPool || drawing} onClick={() => setShowAddModal(true)}>
             <Plus className="h-3.5 w-3.5" />
             Agregar Pregunta Propia
           </Button>
@@ -142,7 +191,7 @@ export default function QuestionsTab() {
             size="cta"
             data-tour="flash-dispatch"
             onClick={sendFlashTest}
-            disabled={selectedQIds.length === 0}
+            disabled={selectedQIds.length === 0 || !currentReport || loadingPool || drawing}
           >
             <Mail className="h-3.5 w-3.5" />
             Aprobar y Enviar Flash Test ({selectedQIds.length})
@@ -150,6 +199,9 @@ export default function QuestionsTab() {
         </div>
       </Panel>
 
+      {currentReport && questionBank?.questions?.length > 0 && !selectedReport?.flash_token &&
+        <AdaptiveEditor key={questionBank.evaluation_id} evaluationId={questionBank.evaluation_id}
+          questions={questionBank.questions} selected={selectedQIds} />}
       {!questionBank || questionBank.questions.length === 0 ? (
         <Panel size="xl" stack={false} className="text-center text-xs text-muted">
           El banco de preguntas aún no ha sido generado para este informe. Espera que termine el análisis.
@@ -171,16 +223,22 @@ export default function QuestionsTab() {
                     <input
                       type="checkbox"
                       checked={isSelected}
+                      disabled={drawing}
                       onChange={() => toggleSelect(q.id)}
                       className="mt-1 h-4 w-4 cursor-pointer rounded"
                     />
                     <div>
                       <span className="mr-2 text-[10px] font-bold text-muted uppercase">
-                        #{idx + 1} {q.is_custom && "• Creada por Profesor"}
+                        #{idx + 1} {q.pool_general && "• Pool general"} {q.is_custom && "• Creada por Profesor"}
                       </span>
                       <p className="mt-0.5 text-sm font-semibold text-fg">{q.text}</p>
+                      {q.type === 'open_ended' && <div className="mt-3 space-y-2 text-xs text-muted">
+                        <strong className="text-brand-ink">Desarrollo · revisión manual</strong>
+                        <p className="whitespace-pre-wrap">Criterios: {q.grading_criteria}</p>
+                        {q.reference_answer && <details><summary className="cursor-pointer">Respuesta de referencia (solo docente)</summary><p className="mt-2 whitespace-pre-wrap">{q.reference_answer}</p></details>}
+                      </div>}
 
-                      {q.options && (
+                      {q.type !== 'open_ended' && q.options && (
                         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {q.options.map((opt: string, oIdx: number) => {
                             const isCorrect = String(oIdx) === String(q.correct_answer);
@@ -206,13 +264,14 @@ export default function QuestionsTab() {
                     </div>
                   </div>
 
-                  <Button variant="link" className="p-1" title="Editar pregunta" onClick={() => editQuestion(q)}>
+                  <Button variant="link" className="p-1" title="Editar pregunta" disabled={drawing} onClick={() => editQuestion(q)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="muted"
                     className="p-1"
                     title="Eliminar del pool"
+                    disabled={drawing}
                     onClick={() => deleteQuestion(q.id)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -224,6 +283,7 @@ export default function QuestionsTab() {
         </div>
       )}
 
+      {questionBank?.questions?.some((question: any) => question.type === 'open_ended') && <DevelopmentReview key={questionBank.evaluation_id} evaluationId={questionBank.evaluation_id} onSaved={() => { if (selectedEvalId) void loadEvalSubData(selectedEvalId); }} />}
       {showAddModal && <AddQuestionModal onClose={() => setShowAddModal(false)} />}
     </div>
   );

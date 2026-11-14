@@ -2,6 +2,8 @@
 
 import { AlertTriangle, Users } from "lucide-react";
 import { api } from "@/lib/api";
+import { AssessmentReports } from "../AssessmentReport";
+import DevelopmentReview from "../DevelopmentReview";
 import { useDashboard, usePersistentState } from "../DashboardContext";
 import { Button, DataTable, EmptyNote, Hint, Input, Panel, SectionTitle } from "../ui";
 
@@ -54,6 +56,8 @@ export default function ResultsTab() {
 
   return (
     <div className="space-y-6">
+      <AssessmentReports key={selectedEvalId} reports={reports} />
+      {reports.filter(report => report.development_pending && report.evaluacion?.id).map(report => <DevelopmentReview key={report.id} evaluationId={report.evaluacion.id} onSaved={() => { if (selectedEvalId) void loadEvalSubData(selectedEvalId); }} />)}
       {evalStats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <StatCard label="Promedio IA" value={percent(evalStats.avg_ai_score)} />

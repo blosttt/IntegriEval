@@ -1,8 +1,12 @@
 # Checklist de implementación
 
+Actualización del 1 de noviembre: preguntas de desarrollo manuales en el pool, pauta privada, guardado de respuestas escritas y corrección docente de 0 a 100 con auditoría. Se conserva pendiente el resultado hasta corregir todas las respuestas de desarrollo y se bloquea el cierre de nota mientras tanto. Suite: 108 pruebas aprobadas. Ver [preguntas de desarrollo](PREGUNTAS_DESARROLLO.md).
+
 Estado al 22 de octubre de 2026. Las casillas marcadas indican código implementado y verificado con el alcance descrito; no equivalen a validación de producción.
 
 Actualización del 26 de octubre: Flash Test integrado en la interfaz moderna, fallos de IA real sin respaldo simulado automático y análisis de informes completos mediante síntesis por secciones. Detalles y limitaciones en [FLUJO_FLASH_IA.md](FLUJO_FLASH_IA.md). Suite actual: 73 pruebas de backend aprobadas.
+
+Actualización del 28 de octubre: 98 pruebas aprobadas. Se añadieron generación de configuración privada, instalador Windows y OCR verificado, límites persistentes de acceso, validación de producción, CORS y hosts explícitos, bloqueo de cuentas demo en producción, sincronización de sesiones, limpieza de rutas estudiantiles, respaldos automáticos/manuales y restauración separada con prueba real. Cohorte API aislada: 30 alumnos, 180 solicitudes, cero errores. Despliegue Docker/Caddy preparado y validado como configuración; contenedores, dominio y certificados reales no ejecutados. Correo real, revisión pedagógica y piloto siguen pendientes. Ver [operación y despliegue](OPERACION_Y_DESPLIEGUE.md).
 
 ## Requisitos de interfaz y permisos
 

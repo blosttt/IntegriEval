@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app import models, schemas
@@ -43,17 +43,21 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db), admin
     }
 
 @router.post("/login", response_model=schemas.TokenResponse)
-def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(login_data: schemas.UserLogin, request: Request, db: Session = Depends(get_db)):
+    from backend.app.services.security import throttle, demo_disabled
+    throttle(db, request, "login-ip", limit=60)
+    throttle(db, request, "login-account", account=str(login_data.correo), limit=8, seconds=900)
+    if demo_disabled(str(login_data.correo)):
+        raise HTTPException(401, "Credenciales incorrectas (correo o contraseña)")
     user = db.query(models.Usuario).filter(models.Usuario.correo == str(login_data.correo).lower()).first()
-    if user:
-        account = db.get(models.AccountStatus, user.id)
-        if account and not account.active:
-            raise HTTPException(403, "La cuenta está desactivada")
     if not user or not verify_password(login_data.contrasena, user.contrasena):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas (correo o contraseña)"
         )
+    account = db.get(models.AccountStatus, user.id)
+    if account and not account.active:
+        raise HTTPException(403, "La cuenta está desactivada")
 
     version = db.get(models.CredentialVersion, user.id)
     token = create_access_token({"sub": str(user.id), "rol": user.rol, "email": user.correo, "ver": version.version if version else 0})

@@ -153,7 +153,9 @@ async def evaluate_submission_llm(
 async def generate_question_pool_llm(
     markdown_content: str,
     syllabus_content: str = "",
-    pool_size: int = 15
+    pool_size: int = 15,
+    focus: str = "",
+    exclude: list[str] | None = None,
 ) -> List[Dict[str, Any]]:
     """
     Generates pool of multiple-choice questions (RF-008).
@@ -170,12 +172,15 @@ async def generate_question_pool_llm(
                   '[{id: A, texto: ..., es_correcta: true}], justificacion_respuesta y seccion_origen. '
                   'Cada pregunta debe tener cuatro alternativas y exactamente una correcta.')
         from pydantic import BaseModel, Field
+        from typing import Literal
+        class ChoiceQuestion(PreguntaCreate):
+            tipo: Literal['alternativas'] = 'alternativas'
         class QuestionPool(BaseModel):
-            preguntas: list[PreguntaCreate] = Field(min_length=pool_size, max_length=pool_size)
+            preguntas: list[ChoiceQuestion] = Field(min_length=pool_size, max_length=pool_size)
         report = await prepare_document(markdown_content, "Informe para generar preguntas")
         context = await prepare_document(syllabus_content, "Material para generar preguntas", limit=6000)
-        data = await request_json(system, f"Genera exactamente {pool_size} preguntas distribuidas entre las secciones del informe.\nContexto:\n{context}\nInforme:\n{report}", QuestionPool.model_json_schema())
-        questions = [PreguntaCreate.model_validate(q).model_dump() for q in data["preguntas"]]
+        data = await request_json(system, f"Genera exactamente {pool_size} preguntas distribuidas entre las secciones del informe.\nEnfoque docente: {focus}\nEvita repetir estos enunciados: {exclude or []}\nContexto:\n{context}\nInforme:\n{report}", QuestionPool.model_json_schema())
+        questions = [ChoiceQuestion.model_validate(q).model_dump() for q in data["preguntas"]]
         if len(questions) != pool_size or len({q["texto"] for q in questions}) != pool_size:
             raise ValueError("Pool incompleto o duplicado")
         return [{**q, '_motor':settings.LLM_PROVIDER} for q in questions]

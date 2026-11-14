@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 from backend.app import models
@@ -30,10 +30,12 @@ class Reset(BaseModel):
         return value
 
 @router.post('/forgot-password')
-async def forgot_password(data: Forgot, db: Session=Depends(get_db)):
+async def forgot_password(data: Forgot, request: Request, db: Session=Depends(get_db)):
+    from backend.app.services.security import throttle, demo_disabled
+    throttle(db, request, "forgot-password", limit=10)
     response={'message':'Si la cuenta está activa, recibirás un enlace de recuperación. Si no llega, contacta al administrador.'}
     user=db.query(models.Usuario).filter_by(correo=str(data.correo).lower()).first()
-    if not user:
+    if not user or demo_disabled(user.correo):
         return response
     status=db.get(models.AccountStatus,user.id)
     if status and not status.active:
@@ -49,12 +51,16 @@ async def forgot_password(data: Forgot, db: Session=Depends(get_db)):
     return response
 
 @router.post('/reset-password')
-def reset_password(data: Reset, db: Session=Depends(get_db)):
+def reset_password(data: Reset, request: Request, db: Session=Depends(get_db)):
+    from backend.app.services.security import throttle, demo_disabled
+    throttle(db, request, "reset-password", limit=20)
     digest=hashlib.sha256(data.token.encode()).hexdigest()
     reset=db.get(models.PasswordReset,digest)
     if not reset or reset.used or utc(reset.expires_at)<=datetime.now(timezone.utc):
         raise HTTPException(400,'El enlace es inválido, ya fue utilizado o ha caducado')
     user=db.get(models.Usuario,reset.usuario_id)
+    if not user or demo_disabled(user.correo):
+        raise HTTPException(400,'El enlace no está disponible')
     status=db.get(models.AccountStatus,user.id)
     if status and not status.active:
         raise HTTPException(400,'El enlace no está disponible')

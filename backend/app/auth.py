@@ -55,6 +55,9 @@ def get_current_user(
     user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
     if user is None:
         raise credentials_exception
+    from backend.app.services.security import demo_disabled
+    if demo_disabled(user.correo):
+        raise credentials_exception
     version = db.get(models.CredentialVersion, user.id)
     if payload.get("ver", 0) != (version.version if version else 0):
         raise credentials_exception

@@ -61,9 +61,9 @@ export default function Home() {
                   ? "Portal del Ayudante"
                   : "Portal del Docente"}
             </Link>
-            <Link href="/student/dashboard" className={buttonClasses("surface", "hero")}>
+            {!user && <Link href="/student/dashboard" className={buttonClasses("surface", "hero")}>
               Portal del Alumno
-            </Link>
+            </Link>}
           </div>
         </section>
         {user ? (

@@ -5,28 +5,66 @@ export const getWsBase=()=>typeof window==='undefined'?'':`${location.protocol==
 export const getToken=()=>typeof window==='undefined'?null:localStorage.getItem('integrieval_token');
 export const getRole=()=>typeof window==='undefined'?null:localStorage.getItem('integrieval_role');
 export const getName=()=>typeof window==='undefined'?null:localStorage.getItem('integrieval_name');
-export function saveToken(token:string,role:string,name:string){localStorage.setItem('integrieval_token',token);localStorage.setItem('integrieval_role',role);localStorage.setItem('integrieval_name',name);}
+export function saveToken(token:string,role:string,name:string){localStorage.setItem('integrieval_role',role);localStorage.setItem('integrieval_name',name);localStorage.setItem('integrieval_token',token);window.dispatchEvent(new Event('integryeval:session-changed'));}
 export const getTeacherContext=()=>{if(typeof window==='undefined'||!location.pathname.startsWith('/teacher/'))return null;const id=Number(new URLSearchParams(location.search).get('profesor'));return Number.isInteger(id)&&id>0?id:null;};
 export function logout(){['token','role','name'].forEach(k=>localStorage.removeItem('integrieval_'+k));window.dispatchEvent(new Event('integryeval:session-changed'));}
 export async function request(path:string,method='GET',body?:any):Promise<any>{
- const headers:Record<string,string>={};if(getToken())headers.Authorization='Bearer '+getToken();const form=body instanceof FormData;if(body&&!form)headers['Content-Type']='application/json';
- const r=await fetch(BASE+path,{method,headers,body:body?(form?body:JSON.stringify(body)):undefined});const d=await r.json().catch(()=>({}));
- if(!r.ok){if(r.status===401){logout();if(path!=='/auth/login'&&location.pathname!=='/'&&location.pathname!=='/login')location.assign('/#acceso');}throw new Error(Array.isArray(d.detail)?d.detail.map((e:any)=>e.msg).join('; '):d.detail||'No se pudo completar la solicitud');}return d;
+ const token=getToken();const headers:Record<string,string>={};if(token)headers.Authorization='Bearer '+token;const form=body instanceof FormData;if(body&&!form)headers['Content-Type']='application/json';
+ const r=await fetch(BASE+path,{method,headers,cache:'no-store',signal:method==='GET'?AbortSignal.timeout(15000):undefined,body:body?(form?body:JSON.stringify(body)):undefined});const d=await r.json().catch(()=>({}));
+ if(!r.ok){if((r.status===401||(path==='/auth/me'&&r.status===403))&&path!=='/auth/login'&&getToken()===token){logout();if(location.pathname!=='/'&&location.pathname!=='/login')location.assign('/#acceso');}const error=new Error(Array.isArray(d.detail)?d.detail.map((e:any)=>e.msg).join('; '):d.detail||'No se pudo completar la solicitud');Object.assign(error,{status:r.status});throw error;}return d;
 }
 const cp=(id:number)=>`/asignaturas/${id}`;
 const course=(c:any)=>({...c,name:c.nombre,period:c.periodo,student_count:c.total_estudiantes});
 const scopes=new Map<number,{course:number,activity:number|null}>();
 const scope=(id:number)=>scopes.get(id)||{course:id,activity:null};
 const scoped=(id:number,path:string)=>cp(scope(id).course)+path+(scope(id).activity?'?actividad_id='+scope(id).activity:'');
-const evaluation=(a:any)=>{const id=a.id?-a.id:a.asignatura_id;scopes.set(id,{course:a.asignatura_id,activity:a.id||null});return {id,course_id:a.asignatura_id,estado:a.estado||'abierta',title:a.titulo,prompt_rubric:a.parametros?.prompt_custom||'',question_rigor:a.parametros?.nivel_rigor||'medium',pool_size:a.parametros?.pool_size||15,flash_questions_count:a.parametros?.num_preguntas_test||5,time_per_question:a.parametros?.tiempo_test_segundos||60,low_threshold:(a.parametros?.umbral_coherencia??60)/100,high_threshold:(a.parametros?.umbral_ia??40)/100};};
-const evalData=(d:any)=>({titulo:d.title,parametros:{titulo_evaluacion:d.title,prompt_custom:d.prompt_rubric,nivel_rigor:({strict:'high',lax:'low'} as any)[d.question_rigor]||d.question_rigor,pool_size:d.pool_size,num_preguntas_test:d.flash_questions_count,tiempo_test_segundos:d.time_per_question,umbral_coherencia:d.low_threshold*100,umbral_ia:d.high_threshold*100}});
+const evaluation=(a:any)=>{const id=a.id?-a.id:a.asignatura_id;scopes.set(id,{course:a.asignatura_id,activity:a.id||null});return {id,course_id:a.asignatura_id,estado:a.estado||'abierta',requires_rubric:!!a.parametros?.requiere_rubrica,title:a.titulo,prompt_rubric:a.parametros?.prompt_custom||'',question_rigor:a.parametros?.nivel_rigor||'medium',pool_size:a.parametros?.pool_size||15,flash_questions_count:a.parametros?.num_preguntas_test||5,time_per_question:a.parametros?.tiempo_test_segundos||60,low_threshold:(a.parametros?.umbral_coherencia??60)/100,high_threshold:(a.parametros?.umbral_ia??40)/100};};
+const evalData=(d:any)=>({titulo:d.title,parametros:{requiere_rubrica:!!d.requires_rubric,titulo_evaluacion:d.title,prompt_custom:d.prompt_rubric,nivel_rigor:({strict:'high',lax:'low'} as any)[d.question_rigor]||d.question_rigor,pool_size:d.pool_size,num_preguntas_test:d.flash_questions_count,tiempo_test_segundos:d.time_per_question,umbral_coherencia:d.low_threshold*100,umbral_ia:d.high_threshold*100}});
 async function saveEvaluation(id:number,d:any){return evaluation(await request(cp(scope(id).course)+'/actividades/'+(scope(id).activity||0),'PUT',evalData(d)));}
 async function context(id:number){const w=await request(`/trabajos/${id}`);for(const c of await api.getCourses()){const student=(await api.getStudents(c.id)).find((s:any)=>s.id===w.estudiante_id);if(student){if(w.actividad_id)scopes.set(-w.actividad_id,{course:c.id,activity:w.actividad_id});return {w,student,course:c};}}throw new Error('Informe no accesible');}
-async function reports(id:number){const [works,p,mail]=await Promise.all([request(scoped(id,'/trabajos')),request(scoped(id,'/panel')),request(cp(scope(id).course)+'/correos')]);return works.map((w:any)=>{const s=p.estudiantes.find((s:any)=>s.estudiante_id===w.estudiante_id);return {...w,course_id:scope(id).course,evaluation_id:id,student_id:w.estudiante_id,student_name:s?.estudiante_nombre,student_email:s?.estudiante_correo,analysis_engine:w.evaluacion?.desglose?.motor_analisis||'histórico',analysis_fallback:!!w.evaluacion?.desglose?.fallback_ia,analysis_status:({analizado:'completed',error:'error',cargado:'pending'} as any)[w.estado]||'pending',ai_score_percentage:s?.pct_logro==null?null:s.pct_logro/100,ai_detected_percentage:s?.pct_ia==null?null:s.pct_ia/100,final_score_percentage:s?.pct_logro_final==null?null:s.pct_logro_final/100,flash_completed:s?.flash_test_estado==='completado',flash_email_sent:mail.some((m:any)=>m.purpose==='flash'&&m.reference_id===s?.flash_test_id&&m.status==='sent'),flash_token:s?.flash_test_token,flash_score:s?.puntaje_flash==null?null:s.puntaje_flash/100};});}
-async function bank(id:number){const {w}=await context(id);if(!w.evaluacion)throw new Error('Primero debe analizar el informe');const qs=await request(`/evaluaciones/${w.evaluacion.id}/preguntas`);return {evaluation_id:w.evaluacion.id,selected_question_ids:qs.filter((q:any)=>q.seleccionada).map((q:any)=>q.id),questions:qs.map((q:any)=>({...q,text:q.texto,options:q.alternativas.map((a:any)=>a.texto),correct_answer:String(q.alternativas.findIndex((a:any)=>a.es_correcta))}))};}
+async function reports(id:number){const [works,p,mail]=await Promise.all([request(scoped(id,'/trabajos')),request(scoped(id,'/panel')),request(cp(scope(id).course)+'/correos')]);return works.map((w:any)=>{const s=p.estudiantes.find((s:any)=>s.estudiante_id===w.estudiante_id);return {...w,course_id:scope(id).course,evaluation_id:id,student_id:w.estudiante_id,student_name:s?.estudiante_nombre,student_email:s?.estudiante_correo,analysis_engine:w.evaluacion?.desglose?.motor_analisis||'histórico',analysis_fallback:!!w.evaluacion?.desglose?.fallback_ia,analysis_status:({analizado:'completed',error:'error',cargado:'pending'} as any)[w.estado]||'pending',ai_score_percentage:s?.pct_logro==null?null:s.pct_logro/100,ai_detected_percentage:s?.pct_ia==null?null:s.pct_ia/100,final_score_percentage:s?.pct_logro_final==null?null:s.pct_logro_final/100,flash_completed:s?.flash_test_estado==='completado',flash_test_id:s?.flash_test_id,development_pending:!!s?.desarrollo_pendiente,flash_email_sent:mail.some((m:any)=>m.purpose==='flash'&&m.reference_id===s?.flash_test_id&&m.status==='sent'),flash_token:s?.flash_test_token,flash_score:s?.puntaje_flash==null?null:s.puntaje_flash/100};});}
+const questionView = (q:any) => ({...q,text:q.texto,type:q.tipo==='desarrollo'?'open_ended':(q.alternativas.length===2&&q.alternativas[0].texto==='Verdadero'&&q.alternativas[1].texto==='Falso'?'true_false':'multiple_choice'),reference_answer:q.respuesta_referencia||'',grading_criteria:q.criterios_evaluacion||'',options:q.alternativas.map((a:any)=>a.texto),correct_answer:String(q.alternativas.findIndex((a:any)=>a.es_correcta))});
+async function bank(id:number){const {w}=await context(id);if(!w.evaluacion)throw new Error('Primero debe analizar el informe');const qs=await request(`/evaluaciones/${w.evaluacion.id}/preguntas`);return {evaluation_id:w.evaluacion.id,selected_question_ids:qs.filter((q:any)=>q.seleccionada).map((q:any)=>q.id),questions:qs.map(questionView)};}
 async function appointments(){const lists=await Promise.all((await api.getCourses()).map(async(c:any)=>(await request(cp(c.id)+'/citas')).map((a:any)=>({...a,course_id:c.id,student_name:a.estudiante_nombre,evaluation_title:c.name,scheduled_time:/Z$|[+-]\d{2}:\d{2}$/.test(a.fecha)?a.fecha:a.fecha+'Z',notes:a.acuerdos,status:({programada:'pending',realizada:'completed',cancelada:'cancelled',ausente:'cancelled'} as any)[a.estado]}))));return lists.flat();}
 async function stats(id:number){const p=await request(scoped(id,'/panel'));const rs=await reports(id);const analyzed=rs.filter((r:any)=>r.ai_score_percentage!=null);return {avg_ai_score:analyzed.length?analyzed.reduce((n:number,r:any)=>n+r.ai_score_percentage,0)/analyzed.length:null,flash_test:{completed:p.tests_completados},appointments:{pending:p.estudiantes.filter((s:any)=>s.cita_estado==='programada').length},review_count:p.requieren_defensa,students:p.estudiantes.map((s:any)=>({student_id:s.estudiante_id,student_name:s.estudiante_nombre,ai_score:s.pct_logro==null?null:s.pct_logro/100,flash_score:s.puntaje_flash==null?null:s.puntaje_flash/100,final_score:s.pct_logro_final==null?null:s.pct_logro_final/100}))};}
+const generalPath = (id:number, suffix = '') => scoped(id, '/pool-general' + suffix);
+const questionBody = (d:any) => ({
+ texto:d.text, seccion_origen:d.seccion_origen ?? null, tipo:d.type==='open_ended'?'desarrollo':'alternativas',
+ respuesta_referencia:d.reference_answer||null, criterios_evaluacion:d.grading_criteria||null,
+ alternativas:d.type==='open_ended'?[]:(d.options||[]).map((text:string,i:number)=>({
+  id:String.fromCharCode(65+i),texto:text,es_correcta:String(i)===String(d.correct_answer)
+ }))
+});
 export const api={
+ getRubricTemplates:(id:number)=>request(cp(scope(id).course)+'/plantillas-rubrica'),
+ saveRubricTemplate:(id:number,data:any)=>request(cp(scope(id).course)+'/plantillas-rubrica','POST',data),
+ getAdaptivePlan:(id:number)=>request(`/evaluaciones/${id}/repreguntas`),
+ saveAdaptivePlan:(id:number,selection:number[],rules:unknown[])=>request(`/evaluaciones/${id}/repreguntas`,'PUT',{seleccion:selection,reglas:rules}),
+ calibrateAssessment:(id:number)=>request(`/flash-tests/${id}/reporte-rubrica/calibrar`,'POST'),
+ async downloadAssessment(id:number){
+  const response=await fetch(BASE+`/flash-tests/${id}/reporte-rubrica/pdf`,{headers:{Authorization:'Bearer '+getToken()}});
+  if(!response.ok) throw new Error('No se pudo descargar el informe');
+  const url=URL.createObjectURL(await response.blob());
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=`integryeval-informe-${id}.pdf`;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ },
+ getAssessmentSetup:(id:number)=>request(scoped(id,'/preparacion-evaluacion')),
+ saveAssessmentSetup:(id:number,data:any)=>request(scoped(id,'/preparacion-evaluacion'),'PUT',data),
+ getAssessmentReport:(id:number)=>request(`/flash-tests/${id}/reporte-rubrica`),
+ generateAssessmentReport:(id:number)=>request(`/flash-tests/${id}/reporte-rubrica/ia`,'POST'),
+ saveAssessmentReview:(id:number,data:any)=>request(`/flash-tests/${id}/reporte-rubrica/docente`,'PUT',data),
+ saveAssessmentVerdict:(id:number,data:any)=>request(`/flash-tests/${id}/reporte-rubrica/contraste`,'PUT',data),
+ getGeneralQuestions:async(id:number)=>(await request(generalPath(id))).map(questionView),
+ saveGeneralQuestion:(id:number,d:any,questionId?:number)=>request(generalPath(id,questionId?'/'+questionId:''),questionId?'PUT':'POST',questionBody(d)),
+ deleteGeneralQuestion:(id:number,qid:number)=>request(generalPath(id,'/'+qid),'DELETE'),
+ getQuestionAssignments:(id:number)=>request(generalPath(id,'/asignaciones')),
+ drawGeneralQuestions:(id:number,source:string)=>{
+  const path=generalPath(id,'/sortear');
+  return request(path+(path.includes('?')?'&':'?')+'fuente='+encodeURIComponent(source),'POST');
+ },
  async login(email:string,password:string){const d=await request('/auth/login','POST',{correo:email,contrasena:password});const role=({docente:'teacher',ayudante:'assistant',admin:'admin'} as any)[d.user.rol];saveToken(d.access_token,role,d.user.nombre);return {...d,role,name:d.user.nombre};},
  register:(d:any)=>request('/auth/register','POST',{nombre:d.name,correo:d.email,contrasena:d.password,rol:d.role==='assistant'?'ayudante':'docente'}),
  getMe:()=>request('/auth/me'),getCourses:async()=>(await request(getTeacherContext()?`/admin/profesores/${getTeacherContext()}/asignaturas`:'/asignaturas')).map(course),getCourse:async(id:number)=>course(await request(cp(id))),
@@ -37,15 +75,15 @@ export const api={
  deleteStudent:(id:number,sid:number)=>request(cp(id)+`/estudiantes/${sid}`,'DELETE'),
  getCourseEvaluations:async(id:number)=>(await request(cp(id)+'/actividades')).map(evaluation),getEvaluation:async(id:number)=>(await api.getCourseEvaluations(scope(id).course)).find((e:any)=>e.id===id),createEvaluation:async(id:number,d:any)=>evaluation(await request(cp(id)+'/actividades','POST',evalData(d))),updateEvaluation:saveEvaluation,
  getMaterials:async(id:number)=>(await request(cp(scope(id).course)+'/materiales')).map((m:any)=>({...m,title:m.nombre,uploaded_at:m.fecha_creacion})),
- async uploadMaterial(id:number,title:string,file:File){const f=new FormData();f.append('file',file);f.append('nombre',title);f.append('tipo','guia');return request(cp(scope(id).course)+'/materiales','POST',f);},
+ async uploadMaterial(id:number,title:string,file:File,kind='guia'){const f=new FormData();f.append('file',file);f.append('nombre',title);f.append('tipo',kind);return request(cp(scope(id).course)+'/materiales','POST',f);},
  deleteMaterial:(id:number,mid:number)=>request(cp(scope(id).course)+`/materiales/${mid}`,'DELETE'),getReports:reports,
  getReport:async(id:number)=>{const c=await context(id);return (await reports(c.w.actividad_id?-c.w.actividad_id:c.course.id)).find((r:any)=>r.id===id);},getReportMarkdown:(id:number)=>request(`/trabajos/${id}`),
  async uploadSingleReport(id:number,sid:number,file:File){const f=new FormData();f.append('file',file);f.append('estudiante_id',String(sid));if(scope(id).activity)f.append('actividad_id',String(scope(id).activity));return request(cp(scope(id).course)+'/trabajos/upload','POST',f);},
  async bulkUploadReports(id:number,sids:number[],files:File[]){const f=new FormData();f.append('estudiante_ids',JSON.stringify(sids));if(scope(id).activity)f.append('actividad_id',String(scope(id).activity));files.forEach(file=>f.append('files',file));const data=await request(cp(scope(id).course)+'/cargas','POST',f);window.dispatchEvent(new Event('integryeval:uploads-queued'));return data;},
  async updateReportScore(id:number,score:number,reason:string){const c=await context(id);return request(cp(c.course.id)+'/cerrar-nota'+(c.w.actividad_id?'?actividad_id='+c.w.actividad_id:''),'POST',{estudiante_id:c.student.id,nota_final:score*100,justificacion:reason});},
  reanalyzeReport:(id:number)=>request(`/trabajos/${id}/reanalizar`,'POST'),getQuestionBank:bank,
- async updateQuestion(id:number,qid:number,d:any){const b=await bank(id);const q=b.questions.find((q:any)=>q.id===qid);return request(`/preguntas/${qid}`,'PUT',{texto:d.text||q.text,alternativas:(d.options||q.options).map((text:string,i:number)=>({id:String.fromCharCode(65+i),texto:text,es_correcta:String(i)===String(d.correct_answer??q.correct_answer)}))});},
- async createQuestion(id:number,d:any){const b=await bank(id);return request(`/evaluaciones/${b.evaluation_id}/preguntas`,'POST',{texto:d.text,alternativas:d.options.map((text:string,i:number)=>({id:String.fromCharCode(65+i),texto:text,es_correcta:String(i)===String(d.correct_answer)}))});},
+ async updateQuestion(id:number,qid:number,d:any){const b=await bank(id);const q=b.questions.find((q:any)=>q.id===qid);const open=(d.type||q.type)==='open_ended';return request(`/preguntas/${qid}`,'PUT',{texto:d.text??q.text,tipo:open?'desarrollo':'alternativas',respuesta_referencia:d.reference_answer??q.reference_answer,criterios_evaluacion:d.grading_criteria??q.grading_criteria,alternativas:open?[]:(d.options||q.options).map((text:string,i:number)=>({id:String.fromCharCode(65+i),texto:text,es_correcta:String(i)===String(d.correct_answer??q.correct_answer)}))});},
+ async createQuestion(id:number,d:any){const b=await bank(id);return request(`/evaluaciones/${b.evaluation_id}/preguntas`,'POST',{texto:d.text,seccion_origen:d.seccion_origen??null,tipo:d.type==='open_ended'?'desarrollo':'alternativas',respuesta_referencia:d.reference_answer||null,criterios_evaluacion:d.grading_criteria||null,alternativas:d.type==='open_ended'?[]:(d.options||[]).map((text:string,i:number)=>({id:String.fromCharCode(65+i),texto:text,es_correcta:String(i)===String(d.correct_answer)}))});},
  deleteQuestion:(id:number,qid:number)=>request(`/preguntas/${qid}`,'DELETE'),
  async selectQuestions(id:number,ids:number[]){const b=await bank(id);await request(`/evaluaciones/${b.evaluation_id}/seleccionar`,'POST',{pregunta_ids:ids});return bank(id);},
  async selectRandomQuestions(id:number){const b=await bank(id);const c=await context(id);const e=await api.getEvaluation(c.w.actividad_id?-c.w.actividad_id:c.course.id);const count=e?.flash_questions_count||5;const qs=[...b.questions];for(let i=qs.length-1;i>0;i--){const n=new Uint32Array(1);crypto.getRandomValues(n);const j=n[0]%(i+1);[qs[i],qs[j]]=[qs[j],qs[i]];}return api.selectQuestions(id,qs.slice(0,count).map((q:any)=>q.id));},

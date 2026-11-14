@@ -12,7 +12,7 @@ import React, {
   type SetStateAction,
 } from "react";
 import { useRouter } from "next/navigation";
-import { api, getToken, getRole, getTeacherContext, request } from "@/lib/api";
+import { api, getToken, getRole, getTeacherContext, getWsBase, request } from "@/lib/api";
 import { TAB_IDS, type TabId } from "./types";
 
 export type EvalForm = {
@@ -130,12 +130,12 @@ export function useDashboard(): DashboardState {
 }
 
 export function usePersistentState<T>(
-  key: string,
+  key: string | null,
   initial: T | (() => T),
 ): [T, Dispatch<SetStateAction<T>>] {
   const { drafts } = useDashboard();
   const [value, setValue] = useState<T>(() =>
-    drafts.has(key)
+    key !== null && drafts.has(key)
       ? (drafts.get(key) as T)
       : typeof initial === "function"
         ? (initial as () => T)()
@@ -146,7 +146,7 @@ export function usePersistentState<T>(
       setValue((previous) => {
         const resolved =
           typeof next === "function" ? (next as (prev: T) => T)(previous) : next;
-        drafts.set(key, resolved);
+        if (key !== null) drafts.set(key, resolved);
         return resolved;
       });
     },
@@ -393,7 +393,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     let retry: ReturnType<typeof setTimeout>;
     const connect = () => {
       socket = new WebSocket(
-        `ws://127.0.0.1:8000/ws/panel/${selectedCourseId}?token=${encodeURIComponent(getToken() || "")}`,
+        `${getWsBase()}/ws/panel/${selectedCourseId}`,
+        ['integrieval', `bearer.${getToken() || ""}`],
       );
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);

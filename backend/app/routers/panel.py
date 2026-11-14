@@ -77,6 +77,8 @@ def get_teacher_panel(
                     pct_logro = round(max(0.0, (evaluacion.nota - 1.0) * (60.0 / 3.0)), 1)
 
         puntaje_flash = flash_test.puntaje if flash_test and flash_test.estado == "completado" and flash_test.fecha_completado else None
+        from backend.app.services.development import pending_review
+        development_pending = pending_review(flash_test, db)
         if flash_test and flash_test.estado == "completado" and flash_test.fecha_completado:
             tests_completados += 1
             if puntaje_flash is not None and puntaje_flash < umbral_coherencia:
@@ -125,7 +127,8 @@ def get_teacher_panel(
                 nota_cerrada=is_cerrada,
                 flash_test_token=flash_test.token if flash_test else None,
                 flash_test_id=flash_test.id if flash_test else None,
-                flash_test_estado=flash_test.estado if flash_test else None
+                flash_test_estado=flash_test.estado if flash_test else None,
+                desarrollo_pendiente=development_pending,
             )
         )
 
@@ -249,7 +252,16 @@ def close_grade(
             estado="completado"
         )
         db.add(test)
+    elif test.id:
+        from sqlalchemy import update
+        db.execute(update(models.FlashTest).where(models.FlashTest.id == test.id).values(estado=models.FlashTest.estado))
+        db.refresh(test)
 
+    from backend.app.services.development import pending_review
+    state = db.get(models.FlashTestState, test.id) if test.id else None
+    if pending_review(test, db) or (state and test.estado != 'completado' and any(question.get('tipo') == 'desarrollo' for question in state.preguntas)):
+        db.rollback()
+        raise HTTPException(409, 'Revisa las respuestas de desarrollo antes de cerrar la calificación')
     nota_previa = test.nota_final_confirmada if test.nota_final_confirmada is not None else (work.evaluacion.nota if work and work.evaluacion else None)
 
     # RN-004: Campo justificación obligatorio (defecto 'Criterio del docente')
@@ -289,14 +301,22 @@ def close_grade(
 async def websocket_teacher_panel(websocket: WebSocket, asignatura_id: int, db: Session = Depends(get_db)):
     """Teacher live dashboard observer WebSocket (RF-012, RNF-001)"""
     try:
-        user = get_current_user(websocket.query_params.get("token", ""), db)
+        offered = [value.strip() for value in websocket.headers.get('sec-websocket-protocol', '').split(',')]
+        if 'integrieval' not in offered:
+            raise HTTPException(401, 'Protocolo de sesión requerido')
+        token = next((value.removeprefix('bearer.') for value in offered if value.startswith('bearer.')), '')
+        from backend.app.config import settings
+        origin = websocket.headers.get('origin')
+        if settings.ENVIRONMENT == 'production' and origin not in settings.cors_origins:
+            raise HTTPException(403, 'Origen no autorizado')
+        user = get_current_user(token, db)
         check_course_access(asignatura_id, user, db)
     except HTTPException:
         await websocket.close(code=1008)
         return
     def authorize_observer():
         db.expire_all()
-        active_user = get_current_user(websocket.query_params.get("token", ""), db)
+        active_user = get_current_user(token, db)
         check_course_access(asignatura_id, active_user, db)
     websocket.state.authorize_observer = authorize_observer
     await ws_manager.connect_teacher(websocket, asignatura_id)

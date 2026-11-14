@@ -7,9 +7,8 @@ from pathlib import Path
 import tempfile
 from threading import RLock
 from dotenv import set_key
-from backend.app.config import BASE_DIR, settings
+from backend.app.config import ENV_PATH, settings
 
-ENV_PATH = BASE_DIR / '.env'
 LOCK = RLock()
 CONFIG_KEYS = ('SMTP_HOST','SMTP_PORT','SMTP_SECURITY','SMTP_USER','SMTP_PASSWORD','SMTP_FROM','PUBLIC_APP_URL')
 
@@ -23,6 +22,15 @@ def fingerprint(values=None):
     values = values or snapshot()
     data=json.dumps({key:values[key] for key in CONFIG_KEYS},sort_keys=True).encode()
     return hmac.new(settings.SECRET_KEY.encode(),data,hashlib.sha256).hexdigest()
+
+
+def disable_unverified_mail(db):
+    """A restored database cannot resume email before the current configuration verifies."""
+    from backend.app import models
+    with LOCK:
+        verification = db.get(models.SmtpVerification, 1)
+        if settings.SMTP_ENABLED and (not verification or verification.config_hash != fingerprint()):
+            settings.SMTP_ENABLED = False
 
 
 def persist(values):

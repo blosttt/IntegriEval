@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { FileText, Sliders } from "lucide-react";
+import AssessmentSetup from "../AssessmentSetup";
 import { api } from "@/lib/api";
 import { useDashboard } from "../DashboardContext";
 import { Button, Field, Hint, Input, Panel, SectionTitle, Select, Textarea, selectableCard } from "../ui";
@@ -33,6 +34,7 @@ export default function EvaluationsTab() {
       const save = creatingEval ? api.createEvaluation : api.updateEvaluation;
       const created = await save(creatingEval ? selectedCourseId : selectedEvalId!, {
         title: evalForm.title,
+        requires_rubric: creatingEval || selectedEval?.requires_rubric,
         prompt_rubric: evalForm.rubric,
         question_rigor: evalForm.rigor,
         pool_size: Number(evalForm.poolSize),
@@ -47,7 +49,7 @@ export default function EvaluationsTab() {
       setSelectedEval(created);
       setCourseEvals(await api.getCourseEvaluations(selectedCourseId));
       setSelectedEvalId(created.id);
-      openTab("materials", { courseId: selectedCourseId, evalId: created.id });
+      openTab("evaluations", { courseId: selectedCourseId, evalId: created.id });
     } catch (err: any) {
       setError(err.message || "Error al crear evaluación");
     }
@@ -65,6 +67,8 @@ export default function EvaluationsTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {!creatingEval && selectedEvalId && selectedEval && <AssessmentSetup key={selectedEvalId}
+        evaluationId={selectedEvalId} readOnly={selectedEval.estado !== "abierta"} />}
       <Panel size="lg" className="lg:col-span-2">
         <SectionTitle icon={Sliders}>
           {creatingEval ? "Nueva evaluación" : "Parámetros de la evaluación seleccionada"}
@@ -122,6 +126,7 @@ export default function EvaluationsTab() {
             </Field>
           </div>
 
+          <Hint>Con rúbrica confirmada se generarán al menos {Math.max(Number(evalForm.poolSize) || 0, 3 * (Number(evalForm.flashCount) || 0))} preguntas candidatas.</Hint>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <Field label="Tiempo por Pregunta (seg)">
               <Input

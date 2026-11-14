@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy.orm import Session
 
 from backend.app.config import settings
@@ -29,77 +30,82 @@ from backend.app.routers import (
 async def lifespan(app: FastAPI):
     # Initialize DB tables
     Base.metadata.create_all(bind=engine)
-    from backend.app.migrations import upgrade_activities
+    from backend.app.migrations import upgrade_activities, upgrade_questions
     upgrade_activities(engine)
+    upgrade_questions(engine)
     from backend.app.database import protect_audit_logs
     protect_audit_logs()
+    from backend.app.services.smtp_configuration import disable_unverified_mail
+    with SessionLocal() as mail_db:
+        disable_unverified_mail(mail_db)
     
-    # Seed demo users if they don't exist
-    db: Session = SessionLocal()
-    try:
-        # --- Docente demo ---
-        teacher = db.query(models.Usuario).filter(models.Usuario.correo == "docente@universidad.cl").first()
-        if not teacher:
-            teacher = models.Usuario(
-                nombre="Prof. Sebastián Cisternas",
-                correo="docente@universidad.cl",
-                contrasena=hash_password("Docente123!"),
-                rol="docente"
-            )
-            db.add(teacher)
-            db.commit()
-            db.refresh(teacher)
+    if settings.SEED_DEMO_DATA:
+        # Seed demo users if they don't exist
+        db: Session = SessionLocal()
+        try:
+            # --- Docente demo ---
+            teacher = db.query(models.Usuario).filter(models.Usuario.correo == "docente@universidad.cl").first()
+            if not teacher:
+                teacher = models.Usuario(
+                    nombre="Prof. Sebastián Cisternas",
+                    correo="docente@universidad.cl",
+                    contrasena=hash_password("Docente123!"),
+                    rol="docente"
+                )
+                db.add(teacher)
+                db.commit()
+                db.refresh(teacher)
 
-            # Default course
-            default_course = models.Asignatura(
-                nombre="INFO1197 - Ingeniería de Software y Título",
-                periodo="Semestre 2",
-                ano=2026,
-                docente_id=teacher.id,
-                parametros={
-                    "prompt_custom": "Enfocar el rigor en la justificación de decisiones arquitecturales y cumplimiento ético.",
-                    "nivel_rigor": "medium",
-                    "pool_size": 15,
-                    "num_preguntas_test": 5,
-                    "umbral_ia": 40.0,
-                    "umbral_coherencia": 60.0,
-                    "tiempo_test_segundos": 60
-                }
-            )
-            db.add(default_course)
-            db.commit()
+                # Default course
+                default_course = models.Asignatura(
+                    nombre="INFO1197 - Ingeniería de Software y Título",
+                    periodo="Semestre 2",
+                    ano=2026,
+                    docente_id=teacher.id,
+                    parametros={
+                        "prompt_custom": "Enfocar el rigor en la justificación de decisiones arquitecturales y cumplimiento ético.",
+                        "nivel_rigor": "medium",
+                        "pool_size": 15,
+                        "num_preguntas_test": 5,
+                        "umbral_ia": 40.0,
+                        "umbral_coherencia": 60.0,
+                        "tiempo_test_segundos": 60
+                    }
+                )
+                db.add(default_course)
+                db.commit()
 
-        # --- Admin demo ---
-        admin = db.query(models.Usuario).filter(models.Usuario.correo == "admin@universidad.cl").first()
-        if not admin:
-            admin = models.Usuario(
-                nombre="Administrador Sistema",
-                correo="admin@universidad.cl",
-                contrasena=hash_password("Admin123!"),
-                rol="admin"
-            )
-            db.add(admin)
-            db.commit()
+            # --- Admin demo ---
+            admin = db.query(models.Usuario).filter(models.Usuario.correo == "admin@universidad.cl").first()
+            if not admin:
+                admin = models.Usuario(
+                    nombre="Administrador Sistema",
+                    correo="admin@universidad.cl",
+                    contrasena=hash_password("Admin123!"),
+                    rol="admin"
+                )
+                db.add(admin)
+                db.commit()
 
-        # --- Ayudante demo ---
-        ayudante = db.query(models.Usuario).filter(models.Usuario.correo == "ayudante@universidad.cl").first()
-        if not ayudante:
-            ayudante = models.Usuario(
-                nombre="Ana Ayudante González",
-                correo="ayudante@universidad.cl",
-                contrasena=hash_password("Ayudante123!"),
-                rol="ayudante"
-            )
-            db.add(ayudante)
-            db.commit()
+            # --- Ayudante demo ---
+            ayudante = db.query(models.Usuario).filter(models.Usuario.correo == "ayudante@universidad.cl").first()
+            if not ayudante:
+                ayudante = models.Usuario(
+                    nombre="Ana Ayudante González",
+                    correo="ayudante@universidad.cl",
+                    contrasena=hash_password("Ayudante123!"),
+                    rol="ayudante"
+                )
+                db.add(ayudante)
+                db.commit()
 
-        # Demo assistant is explicitly assigned to the demo teacher's course.
-        demo_course = db.query(models.Asignatura).filter_by(docente_id=teacher.id).first()
-        if demo_course and not db.get(models.CourseAssistant, (demo_course.id, ayudante.id)):
-            db.add(models.CourseAssistant(asignatura_id=demo_course.id, usuario_id=ayudante.id))
-            db.commit()
-    finally:
-        db.close()
+            # Demo assistant is explicitly assigned to the demo teacher's course.
+            demo_course = db.query(models.Asignatura).filter_by(docente_id=teacher.id).first()
+            if demo_course and not db.get(models.CourseAssistant, (demo_course.id, ayudante.id)):
+                db.add(models.CourseAssistant(asignatura_id=demo_course.id, usuario_id=ayudante.id))
+                db.commit()
+        finally:
+            db.close()
 
     import asyncio
     from contextlib import suppress
@@ -109,9 +115,15 @@ async def lifespan(app: FastAPI):
     reminder_task = asyncio.create_task(reminder_loop(SessionLocal))
     from backend.app.services.upload_worker import upload_loop
     upload_task = asyncio.create_task(upload_loop(SessionLocal))
+    from backend.app.services.backups import backup_loop
+    backup_task = asyncio.create_task(backup_loop(settings)) if settings.BACKUP_ENABLED else None
     try:
         yield
     finally:
+        if backup_task:
+            backup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await backup_task
         upload_task.cancel()
         with suppress(asyncio.CancelledError):
             await upload_task
@@ -132,11 +144,34 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    if settings.ENVIRONMENT == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
+
+
+@app.get("/api/health", include_in_schema=False)
+def health():
+    from sqlalchemy import text
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+    return {"status": "ok"}
 
 # Include Routers
 app.include_router(auth.router)
@@ -159,6 +194,10 @@ from backend.app.routers import upload_queue
 app.include_router(upload_queue.router)
 from backend.app.routers import smtp_admin
 app.include_router(smtp_admin.router)
+from backend.app.routers import readiness
+app.include_router(readiness.router)
+from backend.app.routers import development
+app.include_router(development.router)
 
 # Mount Static Files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
@@ -182,3 +221,8 @@ async def redirect_legacy_interface():
 async def serve_student_flash_test(token: str):
     from urllib.parse import quote
     return RedirectResponse(settings.PUBLIC_APP_URL.rstrip("/") + "/flash/" + quote(token, safe=""), status_code=307)
+from backend.app.routers import general_pool
+app.include_router(general_pool.router)
+
+from backend.app.routers import assessment
+app.include_router(assessment.router)

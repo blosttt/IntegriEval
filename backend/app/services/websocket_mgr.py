@@ -68,7 +68,7 @@ class WebSocketManager:
 
     # Teacher dashboard live subscription
     async def connect_teacher(self, websocket: WebSocket, course_id: int):
-        await websocket.accept()
+        await websocket.accept(subprotocol='integrieval')
         if course_id not in self.teacher_dashboards:
             self.teacher_dashboards[course_id] = set()
         self.teacher_dashboards[course_id].add(websocket)
