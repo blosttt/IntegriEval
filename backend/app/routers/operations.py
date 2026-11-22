@@ -9,7 +9,7 @@ from backend.app import models
 from backend.app.config import settings
 from backend.app.auth import get_current_user, check_course_access, require_admin
 from backend.app.database import get_db
-from backend.app.activities import parameters
+from backend.app.activities import evaluation_window, flash_deadline, parameters
 from backend.app.audit import log_audit
 from backend.app.services.mail_outbox import deliver
 from backend.app.services.scheduling import utc
@@ -26,8 +26,15 @@ def set_state(course_id:int, activity_key:int, data:StateData, user=Depends(get_
     if data.estado!='abierta':
         if db.query(models.UploadJob).filter(models.UploadJob.asignatura_id==course_id,models.UploadJob.actividad_id==(activity_key or None),models.UploadJob.status.in_(['pending','running'])).first():
             raise HTTPException(409,'Hay informes en cola o procesándose. Espera o cancela los pendientes antes de cerrar.')
-        active=db.query(models.FlashTest).join(models.Estudiante).filter(models.Estudiante.asignatura_id==course_id,models.FlashTest.actividad_id==(activity_key or None),models.FlashTest.estado.in_(['pendiente','en_progreso']),models.FlashTest.vigencia>datetime.now(timezone.utc)).first()
-        if active: raise HTTPException(409,'Hay Flash Tests activos. Espera a que terminen o caduquen antes de cerrar.')
+        window = evaluation_window(db, course_id, activity_key or None)
+        active = db.query(models.FlashTest).join(models.Estudiante).filter(
+            models.Estudiante.asignatura_id == course_id,
+            models.FlashTest.actividad_id == (activity_key or None),
+            models.FlashTest.estado.in_(["pendiente", "en_progreso"]),
+        )
+        now = datetime.now(timezone.utc)
+        if any(flash_deadline(test, window) > now for test in active):
+            raise HTTPException(409, "Hay Flash Tests activos. Espera a que terminen o caduquen antes de cerrar.")
     state=db.get(models.ActivityStatus,(course_id,activity_key))
     before=state.estado if state else 'abierta'
     if not state: state=models.ActivityStatus(asignatura_id=course_id,actividad_key=activity_key);db.add(state)
@@ -49,7 +56,7 @@ async def retry_delivery(course_id:int, delivery_id:int, user=Depends(get_curren
     if record.status=='cancelled': raise HTTPException(409,'Este aviso fue reemplazado por una actualización de la cita')
     if record.purpose=='flash':
         test=db.get(models.FlashTest,record.reference_id)
-        if not test or test.estado not in ('pendiente','en_progreso') or utc(test.vigencia)<=datetime.now(timezone.utc):
+        if not test or test.estado not in ('pendiente','en_progreso') or flash_deadline(test, evaluation_window(db, course_id, test.actividad_id)) <= datetime.now(timezone.utc):
             raise HTTPException(409,'El Flash Test ya no está activo; genera una nueva invitación')
     if record.purpose in ('appointment','reminder'):
         appointment=db.get(models.Cita,record.reference_id)

@@ -226,3 +226,5 @@ app.include_router(general_pool.router)
 
 from backend.app.routers import assessment
 app.include_router(assessment.router)
+from backend.app.routers import flash_mvp
+app.include_router(flash_mvp.router)

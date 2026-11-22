@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Users } from "lucide-react";
 import { api } from "@/lib/api";
+import { FlashAttempts } from '../FlashMvp';
 import { AssessmentReports } from "../AssessmentReport";
 import DevelopmentReview from "../DevelopmentReview";
 import { useDashboard, usePersistentState } from "../DashboardContext";
@@ -25,6 +26,7 @@ export default function ResultsTab() {
     reviewList,
     reports,
     selectedEvalId,
+    selectedEval,
     loadEvalSubData,
     setAppointmentDraft,
     setError,
@@ -56,6 +58,8 @@ export default function ResultsTab() {
 
   return (
     <div className="space-y-6">
+      {selectedEvalId && selectedEval && <FlashAttempts key={selectedEvalId} id={selectedEvalId}
+        readOnly={selectedEval.estado !== "abierta"} onChanged={() => { void loadEvalSubData(selectedEvalId); }} />}
       <AssessmentReports key={selectedEvalId} reports={reports} />
       {reports.filter(report => report.development_pending && report.evaluacion?.id).map(report => <DevelopmentReview key={report.id} evaluationId={report.evaluacion.id} onSaved={() => { if (selectedEvalId) void loadEvalSubData(selectedEvalId); }} />)}
       {evalStats && (

@@ -8,12 +8,12 @@ import { Banner, Button, Panel, shellClasses } from "@/components/ui";
 
 type Question = { id: number; texto: string; tipo?: 'alternativas' | 'desarrollo'; alternativas: { id: string; texto: string }[] };
 type Session = {
-  estado: string; estudiante_nombre: string; asignatura_nombre: string;
+  esperando_apertura?: boolean; apertura?: string; cierre?: string; adaptativo?: boolean; estado: string; estudiante_nombre: string; asignatura_nombre: string;
   asignatura_periodo: string; num_preguntas: number; pregunta_actual: number;
   tiempo_segundos: number; tiempo_restante_segundos: number; preguntas: Question[];
   respuestas: Record<string, string>;
 };
-type Result = { porcentaje_logro: number | null; respuestas_correctas: number; tiempo_transcurrido: number; preguntas_alternativas: number; preguntas_desarrollo: number; revision_pendiente: boolean; desarrollo_pendientes: number };
+type Result = { retroalimentacion?: string | null; siguiente_token?: string | null; porcentaje_logro: number | null; respuestas_correctas: number; tiempo_transcurrido: number; preguntas_alternativas: number; preguntas_desarrollo: number; revision_pendiente: boolean; desarrollo_pendientes: number };
 type Action = "info" | "start" | "answer" | "draft";
 
 export default function FlashPage() {
@@ -37,7 +37,6 @@ function FlashSession({ token }: { token: string }) {
   useEffect(() => {
     const controller = new AbortController();
     let running = false, stopped = false, terminal = false;
-    let reviewPending = false;
     let queued: { action: Action; body?: object } | null = null;
     let deadline: number | null = null;
     const request = async (action: string, body?: object) => {
@@ -79,7 +78,7 @@ function FlashSession({ token }: { token: string }) {
         if (data.estado === "completado") {
           // The server already scored the persisted answers. Retrieve its idempotent result.
           const score: Result = await request("submit", { token, respuestas: {}, tiempo_transcurrido: 0 });
-          if (!stopped) { setResult(score); reviewPending = score.revision_pendiente; terminal = true; }
+          if (!stopped) { setResult(score); terminal = true; }
         }
         if (!stopped) setError("");
       } catch (e) {
@@ -94,7 +93,7 @@ function FlashSession({ token }: { token: string }) {
       }
     };
     run.current = (action, body) => {
-      if (action === 'info' && reviewPending) terminal = false;
+      if (action === 'info' && !stopped) terminal = false;
       void refresh(action, body);
     };
     void refresh();
@@ -134,7 +133,12 @@ function FlashSession({ token }: { token: string }) {
           {result.preguntas_alternativas > 0 && <p>{result.respuestas_correctas} de {result.preguntas_alternativas} alternativas correctas.</p>}
           {result.preguntas_desarrollo > 0 && <p>{result.preguntas_desarrollo} preguntas de desarrollo · {result.desarrollo_pendientes} pendientes de revisión.</p>}
           <p>Tiempo total: {result.tiempo_transcurrido} segundos.</p>
-          {result.revision_pendiente && <Button variant="outline" size="classic" onClick={() => run.current('info')}>Actualizar revisión</Button>}
+          {result.retroalimentacion && <section className="space-y-2">
+            <h3 className="font-bold">Retroalimentación del docente</h3>
+            <p className="whitespace-pre-wrap">{result.retroalimentacion}</p>
+          </section>}
+          {result.siguiente_token && <a className="font-semibold text-brand-ink underline" href={`/flash/${encodeURIComponent(result.siguiente_token)}`}>Abrir segundo intento</a>}
+          <Button variant="outline" size="classic" onClick={() => run.current('info')}>Actualizar resultado</Button>
           <p className="text-muted">Tus respuestas quedaron guardadas. Tu profesor revisará el resultado junto con tu informe y te avisará si corresponde una revisión.</p>
         </Panel>
         : !session ? <Panel role="status">{error ? "No pudimos cargar la evaluación." : "Cargando tu Flash Test…"}</Panel>
@@ -148,7 +152,9 @@ function FlashSession({ token }: { token: string }) {
             <li>Si pierdes conexión, reconecta cuanto antes. Solo se califican respuestas guardadas.</li>
             {session.preguntas.some(item => item.tipo === 'desarrollo') && <li>El texto de desarrollo se guarda automáticamente mientras escribes. Si vence el tiempo, se conserva el último texto recibido por el servidor. El docente revisará estas respuestas.</li>}
           </ul>
-          <Button disabled={busy} onClick={() => run.current("start", {})}>{busy ? "Iniciando…" : "Comenzar Flash Test"}</Button>
+          {session.apertura && <p>Abre el {new Date(session.apertura).toLocaleString("es-CL")}</p>}
+          {session.cierre && <p>Cierra el {new Date(session.cierre).toLocaleString("es-CL")}</p>}
+          <Button disabled={busy || session.esperando_apertura} onClick={() => run.current("start", {})}>{busy ? "Iniciando…" : "Comenzar Flash Test"}</Button>
         </Panel>
         : active && question ? <Panel>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -171,6 +177,10 @@ function FlashSession({ token }: { token: string }) {
             className="flex items-start gap-3 rounded-control border border-line bg-raised p-4 text-left hover:border-brand focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60"
             onClick={() => run.current("answer", { question_id: question.id, answer: alternative.id })}
           ><span className="font-bold text-brand-ink">{alternative.id}</span><span>{alternative.texto}</span></button>)}</div>}
+          {session.adaptativo && question.tipo !== "desarrollo" && <Button type="button" variant="outline"
+            disabled={busy || seconds === 0} onClick={() => run.current("answer", { question_id: question.id, answer: null })}>
+            Continuar sin responder
+          </Button>}
           <p className="text-sm text-muted" role="status">{busy ? "Guardando respuesta…" : seconds === 0 ? "Sincronizando la siguiente pregunta…" : question.tipo === 'desarrollo' ? "Envía tu respuesta para avanzar. La revisión será manual." : "Al seleccionar una alternativa, avanzas a la siguiente pregunta."}</p>
         </Panel>
         : <Panel role="status">Confirmando el resultado guardado…</Panel>}

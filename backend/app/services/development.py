@@ -36,7 +36,12 @@ def refresh_score(test, state, db):
     details = score_details(test, state, db)
     test.puntaje = details['puntaje']
     evaluation = test_evaluation(test, db)
-    if evaluation and evaluation.desglose:
+    newer = db.query(models.FlashTest.id).filter(
+        models.FlashTest.estudiante_id == test.estudiante_id,
+        models.FlashTest.actividad_id == test.actividad_id,
+        models.FlashTest.id > test.id,
+    ).first()
+    if evaluation and evaluation.desglose and not newer:
         params = parameters(test.estudiante.asignatura, test.actividad_id, db)
         pending = details['revision_pendiente']
         low = not pending and test.puntaje < float(params.get('umbral_coherencia', 60))

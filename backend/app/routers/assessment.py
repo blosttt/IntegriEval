@@ -170,7 +170,7 @@ def allowed_evaluation(evaluation_id, user, db):
 def get_plan(evaluation_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
     allowed_evaluation(evaluation_id, user, db)
     plan = db.get(models.AdaptivePlan, evaluation_id)
-    return plan.reglas if plan else []
+    return Plan(reglas=plan.reglas).model_dump()["reglas"] if plan else []
 
 
 class PlanWithSelection(Plan):

@@ -33,3 +33,17 @@ def assert_activity_open(course_id, activity_id, db):
     status = db.get(models.ActivityStatus, (course_id, activity_id or 0))
     if status and status.estado != "abierta":
         raise HTTPException(409, "La evaluación está cerrada o archivada. Reábrela antes de modificarla.")
+
+
+def evaluation_window(db, course_id, activity_id):
+    return db.get(models.EvaluationWindow, (course_id, activity_id or 0))
+
+
+def flash_deadline(test, window):
+    from datetime import timedelta, timezone
+    expiry = test.vigencia
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    if window and window.cierre:
+        return window.cierre
+    return max(expiry, window.apertura + timedelta(hours=48)) if window and window.apertura else expiry

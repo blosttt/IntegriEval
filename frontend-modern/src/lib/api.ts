@@ -36,6 +36,11 @@ const questionBody = (d:any) => ({
  }))
 });
 export const api={
+ getFlashWindow:(id:number)=>request(scoped(id,'/flash-test/ventana')),
+ saveFlashWindow:(id:number,data:{apertura:string|null;cierre:string|null})=>request(scoped(id,'/flash-test/ventana'),'PUT',data),
+ getFlashAttempts:(id:number)=>request(scoped(id,'/flash-test/intentos')),
+ publishFlashFeedback:(id:number,texto:string)=>request(`/flash-tests/${id}/retroalimentacion`,'PUT',{texto}),
+ repeatFlashTest:(id:number)=>request(`/flash-tests/${id}/repetir`,'POST'),
  getRubricTemplates:(id:number)=>request(cp(scope(id).course)+'/plantillas-rubrica'),
  saveRubricTemplate:(id:number,data:any)=>request(cp(scope(id).course)+'/plantillas-rubrica','POST',data),
  getAdaptivePlan:(id:number)=>request(`/evaluaciones/${id}/repreguntas`),

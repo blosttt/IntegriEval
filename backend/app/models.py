@@ -124,6 +124,23 @@ class Evaluacion(Base):
     preguntas = relationship("Pregunta", back_populates="evaluacion", cascade="all, delete-orphan", order_by="Pregunta.id")
     adaptive_plan = relationship("AdaptivePlan", uselist=False, cascade="all, delete-orphan")
 
+class EvaluationWindow(Base):
+    __tablename__ = "evaluation_windows"
+
+    asignatura_id = Column(Integer, ForeignKey("asignaturas.id"), primary_key=True)
+    actividad_key = Column(Integer, primary_key=True)
+    apertura = Column(UTCDateTime, nullable=True)
+    cierre = Column(UTCDateTime, nullable=True)
+
+
+class FlashFeedback(Base):
+    __tablename__ = "flash_feedback"
+
+    test_id = Column(Integer, ForeignKey("flash_tests.id"), primary_key=True)
+    texto = Column(Text, nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+
+
 class RubricTemplate(Base):
     __tablename__ = "rubric_templates"
 

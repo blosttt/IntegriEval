@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { FileText, Sliders } from "lucide-react";
+import { FlashWindow } from '../FlashMvp';
 import AssessmentSetup from "../AssessmentSetup";
 import { api } from "@/lib/api";
 import { useDashboard } from "../DashboardContext";
@@ -67,6 +68,7 @@ export default function EvaluationsTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {!creatingEval && selectedEvalId && selectedEval && <FlashWindow key={selectedEvalId} id={selectedEvalId} readOnly={selectedEval.estado !== "abierta"} />}
       {!creatingEval && selectedEvalId && selectedEval && <AssessmentSetup key={selectedEvalId}
         evaluationId={selectedEvalId} readOnly={selectedEval.estado !== "abierta"} />}
       <Panel size="lg" className="lg:col-span-2">

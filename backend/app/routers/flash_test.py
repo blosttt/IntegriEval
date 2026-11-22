@@ -14,6 +14,7 @@ from backend.app.audit import log_audit
 
 from backend.app.activities import parameters, work_for, test_evaluation, assert_activity_open, lock_question_plan
 
+from backend.app.activities import evaluation_window, flash_deadline
 from backend.app.services.adaptive import advance_branch, compile_plan, snapshot
 
 router = APIRouter(tags=["Flash Test en Tiempo Real"])
@@ -66,7 +67,7 @@ async def dispatch_flash_tests(
             seconds_per_question=flash_test.tiempo_limite_segundos
         )
 
-        db.add(models.MailDelivery(asignatura_id=asignatura_id, estudiante_id=s.id, purpose='flash', reference_id=flash_test.id, recipient=s.correo, subject=f'IntegryEval · Flash Test · {course.nombre}', body=f'Hola {s.nombre}, abre tu Flash Test: {test_link}\nVigencia: {flash_test.vigencia}.', status='sent' if email_sent else ('disabled' if not settings.SMTP_ENABLED else 'failed'), attempts=1, error=None if email_sent else 'Correo no enviado; revisa la configuración SMTP', sent_at=datetime.now(timezone.utc) if email_sent else None))
+        db.add(models.MailDelivery(asignatura_id=asignatura_id, estudiante_id=s.id, purpose='flash', reference_id=flash_test.id, recipient=s.correo, subject=f'IntegryEval · Flash Test · {course.nombre}', body=f'Hola {s.nombre}, abre tu Flash Test: {test_link}. Las fechas de apertura y cierre aparecen en el enlace.', status='sent' if email_sent else ('disabled' if not settings.SMTP_ENABLED else 'failed'), attempts=1, error=None if email_sent else 'Correo no enviado; revisa la configuración SMTP', sent_at=datetime.now(timezone.utc) if email_sent else None))
         db.commit()
         dispatched_items.append(
             schemas.FlashTestDispatchItem(
@@ -124,20 +125,20 @@ def prepare_student_test(activity_id, student_id, seconds, explicit, db):
 
     if not any(q.seleccionada for q in work.evaluacion.preguntas):
         return None
-    if db.query(models.FlashTest).filter_by(estudiante_id=student_id, actividad_id=activity_id, estado="completado").first():
-        return None
-    # Check if an active test already exists
-    existing_test = db.query(models.FlashTest).filter(
-        models.FlashTest.estudiante_id == student_id,
-        models.FlashTest.actividad_id == activity_id,
-        models.FlashTest.estado.in_(["pendiente", "en_progreso"])
-    ).first()
 
+    window = evaluation_window(db, work.estudiante.asignatura_id, activity_id)
+    if window and window.cierre and window.cierre <= datetime.now(timezone.utc):
+        raise HTTPException(409, "La ventana de la evaluación ya cerró.")
+    latest = db.query(models.FlashTest).filter_by(estudiante_id=student_id, actividad_id=activity_id).order_by(models.FlashTest.id.desc()).first()
+    if latest and (latest.estado == "completado" or latest.nota_cerrada):
+        return None
     now = datetime.now(timezone.utc)
-    reused = existing_test and ensure_utc(existing_test.vigencia) > now
+    reused = bool(latest and latest.estado in ("pendiente", "en_progreso") and flash_deadline(latest, window) > now)
     if reused:
-        flash_test = existing_test
+        flash_test = latest
     else:
+        if db.query(models.FlashTest.id).filter_by(estudiante_id=student_id, actividad_id=activity_id, estado="completado").first():
+            return None
         token = str(uuid.uuid4())
         flash_test = models.FlashTest(
             estudiante_id=student_id,
@@ -212,7 +213,13 @@ def advance_time(test, state, db):
     now = datetime.now(timezone.utc)
     if test.estado in {"completado", "expirado"}:
         return
-    if ensure_utc(test.vigencia) <= now:
+    window = evaluation_window(db, test.estudiante.asignatura_id, test.actividad_id)
+    deadline = flash_deadline(test, window)
+    if window and window.cierre and deadline <= now and test.estado == "en_progreso":
+        elapsed = max(0, int((deadline - ensure_utc(test.fecha_inicio)).total_seconds()))
+        evaluate_and_close_test(test, test.respuestas or {}, elapsed, db)
+        return
+    if deadline <= now:
         test.estado = "expirado"
         return
     if not state.inicio_pregunta:
@@ -265,14 +272,22 @@ def locked_test(token, db):
         raise
 
 
-def public_state(test, state):
+def public_state(test, state, db):
     remaining = test.tiempo_limite_segundos
     if state.inicio_pregunta:
         remaining = max(0, remaining - int((datetime.now(timezone.utc) - ensure_utc(state.inicio_pregunta)).total_seconds()))
-    visible = state.preguntas
-    if state.adaptive is not None and test.estado != "completado":
+    window = evaluation_window(db, test.estudiante.asignatura_id, test.actividad_id)
+    opening = window.apertura if window else None
+    closing = flash_deadline(test, window)
+    waiting = test.estado == "pendiente" and bool(opening and opening > datetime.now(timezone.utc))
+    if test.estado == "en_progreso" and window and window.cierre:
+        remaining = min(remaining, max(0, int((closing - datetime.now(timezone.utc)).total_seconds())))
+    visible = [] if waiting else state.preguntas
+    if not waiting and state.adaptive is not None and test.estado != "completado":
         visible = visible[:state.indice + 1] if test.estado == "en_progreso" else []
     return {
+        "apertura": opening, "cierre": closing if window and window.cierre else None,
+        "esperando_apertura": waiting,
         "adaptativo": state.adaptive is not None,
         "token": test.token, "estudiante_nombre": test.estudiante.nombre,
         "asignatura_nombre": test.estudiante.asignatura.nombre,
@@ -298,17 +313,20 @@ async def notify_result(test):
 @router.get("/api/flash-test/{token}/info")
 def get_flash_test_info(token: str, db: Session = Depends(get_db)):
     test, state = load_test(token, db, allow_completed=True)
-    return public_state(test, state)
+    return public_state(test, state, db)
 
 
 @router.post("/api/flash-test/{token}/start")
 def start_flash_test(token: str, db: Session = Depends(get_db)):
     with locked_test(token, db) as (test, state):
         if test.estado == "pendiente":
+            window = evaluation_window(db, test.estudiante.asignatura_id, test.actividad_id)
+            if window and window.apertura and window.apertura > datetime.now(timezone.utc):
+                raise HTTPException(409, "La evaluación todavía no abre.")
             test.estado = "en_progreso"
             test.fecha_inicio = datetime.now(timezone.utc)
             state.inicio_pregunta = test.fecha_inicio
-        return public_state(test, state)
+        return public_state(test, state, db)
 
 
 from pydantic import BaseModel, Field
@@ -321,13 +339,13 @@ def _record_answer(token, payload, db):
     with locked_test(token, db) as (test, state):
         completed = False
         if test.estado == "completado":
-            return public_state(test, state), test, completed
+            return public_state(test, state, db), test, completed
         if test.estado != "en_progreso":
             raise HTTPException(409, "Inicie el test antes de responder")
         question = state.preguntas[state.indice]
         if payload.question_id != question["id"]:
             if str(payload.question_id) in (test.respuestas or {}):
-                return public_state(test, state), test, completed
+                return public_state(test, state, db), test, completed
             raise HTTPException(409, "La pregunta ya no está activa")
         if question.get('tipo', 'alternativas') == 'desarrollo':
             if not (payload.answer or '').strip():
@@ -341,7 +359,7 @@ def _record_answer(token, payload, db):
         if state.indice == len(state.preguntas):
             evaluate_and_close_test(test, test.respuestas, int((datetime.now(timezone.utc) - ensure_utc(test.fecha_inicio)).total_seconds()), db)
             completed = True
-        return public_state(test, state), test, completed
+        return public_state(test, state, db), test, completed
 
 
 async def record_answer(token, payload, db):
@@ -365,7 +383,7 @@ def save_development_draft(token: str, payload: AnswerRequest, db: Session = Dep
         if question['id'] != payload.question_id or question.get('tipo') != 'desarrollo':
             raise HTTPException(409, 'Solo se guarda el texto de la pregunta de desarrollo activa')
         test.respuestas = {**(test.respuestas or {}), str(question['id']): payload.answer or ''}
-        return public_state(test, state)
+        return public_state(test, state, db)
 
 
 def _submit_flash_test(token, payload, db):
@@ -380,7 +398,14 @@ def _submit_flash_test(token, payload, db):
             completed = True
         from backend.app.services.development import score_details
         details = score_details(test, state, db)
-        return ({"status": "success", "porcentaje_logro": test.puntaje, "puntaje": test.puntaje, "tiempo_transcurrido": test.tiempo_transcurrido,
+        feedback = db.get(models.FlashFeedback, test.id)
+        following = db.query(models.FlashTest).filter(
+            models.FlashTest.estudiante_id == test.estudiante_id,
+            models.FlashTest.actividad_id == test.actividad_id, models.FlashTest.id > test.id,
+        ).order_by(models.FlashTest.id).first()
+
+        return ({"status": "success", "retroalimentacion": feedback.texto if feedback else None,
+                 "siguiente_token": following.token if following else None, "porcentaje_logro": test.puntaje, "puntaje": test.puntaje, "tiempo_transcurrido": test.tiempo_transcurrido,
                 **{key: value for key, value in details.items() if key not in {'falladas', 'puntaje'}}}, test, completed)
 
 
@@ -405,7 +430,7 @@ async def websocket_flash_test(websocket: WebSocket, token: str, db: Session = D
         while True:
             db.expire_all()
             test, state = load_test(token, db, allow_completed=True)
-            await websocket.send_json({"type": "STATE", **public_state(test, state)})
+            await websocket.send_json({"type": "STATE", **public_state(test, state, db)})
             if test.estado == "completado":
                 await notify_result(test)
                 break

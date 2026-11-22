@@ -73,7 +73,7 @@ export default function AssessmentReport({ testId }: { testId: number }) {
           <strong>{row.pregunta}</strong>
           <p className="whitespace-pre-wrap">{row.respuesta || "Sin respuesta"}</p>
           {row.respuesta_esperada && <Hint>Respuesta de referencia · {row.respuesta_esperada}</Hint>}
-          {row.rama && <Hint>Repregunta tras la pregunta {row.depende_de} · {{ acierto: "acierto", error: "retomar concepto", sin_respuesta: "sin respuesta" }[row.rama]}</Hint>}
+          {row.rama && <Hint>Repregunta tras la pregunta {row.depende_de} · {{ acierto: "acierto (versión anterior)", error: "ayuda tras error", sin_respuesta: "pregunta en blanco" }[row.rama]}</Hint>}
           {row.pauta && <Hint>Pauta · {row.pauta}</Hint>}
         </li>)}</ol>
       </details>
